@@ -2,7 +2,6 @@ import { getCollection } from "../models";
 
 const setCollection = (base: string) => {
   return (req: any, _res: any, next: any) => {
-    req.companyName = req.body.name;
     req.collectionCrud = getCollection(base, req.companyName);
     if (base === "user") {
       req.collectionCompany = getCollection("company", req.companyName);
