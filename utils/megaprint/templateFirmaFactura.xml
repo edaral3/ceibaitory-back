@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FirmaDocumentoRequest id="$UUID">
+<xml_dte><![CDATA[
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<dte:GTDocumento xmlns:dte="http://www.sat.gob.gt/dte/fel/0.2.0" Version="0.1">
+	<dte:SAT ClaseDocumento="dte">
+		<dte:DTE ID="DatosCertificados">
+			<dte:DatosEmision ID="DatosEmision">
+				<dte:DatosGenerales CodigoMoneda="GTQ" FechaHoraEmision="$FECHA" Tipo="FACT"/>
+				<dte:Emisor AfiliacionIVA="GEN" CodigoEstablecimiento="2"  NITEmisor="684443K" NombreComercial="AGROPECUARIA ALDANA" NombreEmisor="EDGAR OBDULIO, ALDANA REYES">
+					<dte:DireccionEmisor>
+						<dte:Direccion>BARRIO EL PORVENIR</dte:Direccion>
+						<dte:CodigoPostal>2001</dte:CodigoPostal>
+						<dte:Municipio>GUASTATOYA</dte:Municipio>
+						<dte:Departamento>EL PROGRESO</dte:Departamento>
+						<dte:Pais>GT</dte:Pais>
+					</dte:DireccionEmisor>
+				</dte:Emisor>
+				<dte:Receptor CorreoReceptor="$CORREO" IDReceptor="$NIT" NombreReceptor="$NOMBRE">
+					<dte:DireccionReceptor>
+						<dte:Direccion>$DIRECCIONR</dte:Direccion>
+						<dte:CodigoPostal>$CODIGOPOSTALR</dte:CodigoPostal>
+						<dte:Municipio/>
+						<dte:Departamento/>
+						<dte:Pais>GT</dte:Pais>
+					</dte:DireccionReceptor>
+				</dte:Receptor>
+				<dte:Frases>
+					<dte:Frase CodigoEscenario="1" TipoFrase="1"/>
+				</dte:Frases>
+				<dte:Items>
+					$ITEMS
+				</dte:Items>
+				<dte:Totales>
+					<dte:TotalImpuestos>
+						<dte:TotalImpuesto NombreCorto="IVA" TotalMontoImpuesto="$TOTALI"/>
+					</dte:TotalImpuestos>
+					<dte:GranTotal>$TOTALV</dte:GranTotal>
+				</dte:Totales>
+			</dte:DatosEmision>
+		</dte:DTE>
+	</dte:SAT>
+</dte:GTDocumento>
+]]></xml_dte>
+</FirmaDocumentoRequest>

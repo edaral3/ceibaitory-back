@@ -1,0 +1,10 @@
+{
+    "nombre" : "Entorno de produccion",
+    "configDB":{
+        "HOSTMONGO": "mongodb+srv://edgar:z7wB7legzrwYFjgD@agropecuariaaldana.ihlmx.mongodb.net/?retryWrites=true&w=majority",
+        "HOSTREDIS": "redis://redis:6379/"
+    },
+    "configToken":{
+        "SEED":"pollogallina"
+    }
+}

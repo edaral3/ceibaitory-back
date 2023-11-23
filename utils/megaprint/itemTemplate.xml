@@ -1,0 +1,17 @@
+<dte:Item BienOServicio="B" NumeroLinea="$INDEX">
+	<dte:Cantidad>$CANTIDAD</dte:Cantidad>
+	<dte:UnidadMedida>UNI</dte:UnidadMedida>
+	<dte:Descripcion>$DESCRIPCION</dte:Descripcion>
+	<dte:PrecioUnitario>$PUNIT</dte:PrecioUnitario>
+	<dte:Precio>$PTOTAL</dte:Precio>
+	<dte:Descuento>0.00</dte:Descuento>
+	<dte:Impuestos>
+		<dte:Impuesto>
+			<dte:NombreCorto>IVA</dte:NombreCorto>
+			<dte:CodigoUnidadGravable>1</dte:CodigoUnidadGravable>
+			<dte:MontoGravable>$MONTOSINIMPUESTO</dte:MontoGravable>
+			<dte:MontoImpuesto>%IMPUESTO</dte:MontoImpuesto>
+		</dte:Impuesto>
+	</dte:Impuestos>
+	<dte:Total>$PTOTAL</dte:Total>
+</dte:Item>
