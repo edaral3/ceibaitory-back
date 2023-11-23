@@ -2,14 +2,15 @@ import express from "express";
 import credit from "../controller/credit";
 import { setCollection } from "../middleware/collection"
 import { validateToken } from "../middleware/auth";
+import { validator } from "../middleware/bodyValidator";
 
 const router = express.Router()
 
-router.post('/pay', validateToken([""]), setCollection('credit'), credit.pay)
+router.post('/', validator("credit"), validateToken([""]), setCollection('credit'), credit.create)
 
-router.post('/unpaid', validateToken([""]), setCollection('credit'), credit.unpaid)
+router.put('/pay/:id', validator("payment"), validateToken([""]), setCollection('credit'), credit.pay)
 
-router.post('/', validateToken([""]), setCollection('credit'), credit.create)
+router.put('/unpaid/:id', validateToken([""]), setCollection('credit'), credit.unpaid)
 
 router.delete('/:id', validateToken([""]), setCollection('credit'), credit.cancel)
 
