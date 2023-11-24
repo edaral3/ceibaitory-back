@@ -1,6 +1,6 @@
 services:
   server:
-    image: "edaral3/agropecuaria:back"
+    image: "ceibaitory:back"
     restart: always
     ports:
       - "3000:3000"
