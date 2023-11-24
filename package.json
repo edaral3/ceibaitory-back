@@ -3,10 +3,10 @@
   "version": "3.0.0",
   "private": true,
   "scripts": {
-    "start": "ts-node-esm index.ts",
-    "dev": "nodemon index.ts",
-    "lint": "eslint --ext .js .",
-    "lint:fix": "eslint --fix --ext .js ."
+    "start": "ts-node-esm ./src/index.ts",
+    "dev": "nodemon ./src/index.ts",
+    "lint": "eslint --ext .ts .",
+    "lint:fix": "eslint --fix --ext .ts ."
   },
   "dependencies": {
     "app-root-path": "^3.0.0",
