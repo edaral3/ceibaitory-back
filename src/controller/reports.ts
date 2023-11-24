@@ -101,7 +101,7 @@ const getUtilityPerDay = async (CollectionSale: any, date): Promise<any> => {
 
 const getInventoryExcel = async (req: any, res: any): Promise<void> => {
   try {
-    const products = await req.collectionProduct.find().sort({ fecha: -1 })
+    const products = await req.CollectionProduct.find().sort({ fecha: -1 })
     let csvResponse = '#,Nombre,Cantidad,Precio Costo\n'
 
     products.forEach((item, index) => {
@@ -180,7 +180,7 @@ const getTop10ABC = async (req: any, res: any): Promise<void> => {
         }
       }
     }
-    const data = await req.collectionProduct.aggregate([
+    const data = await req.CollectionProduct.aggregate([
       find,
       {
         $project: {
@@ -212,7 +212,7 @@ const getTop10ABC = async (req: any, res: any): Promise<void> => {
       }
     })
 
-    const dataList = getABC(await getProducts(req.collectionProduct))
+    const dataList = getABC(await getProducts(req.CollectionProduct))
 
     const dataA = filterByCategory(dataList.A, [...list2])
     const dataB = filterByCategory(dataList.B, [...list2])
@@ -300,8 +300,8 @@ const getListSaleRange = async (
   return data
 }
 
-const getProducts = async (collectionProduct): Promise<any> => {
-  const products = await collectionProduct.find().sort({ fecha: -1 })
+const getProducts = async (CollectionProduct): Promise<any> => {
+  const products = await CollectionProduct.find().sort({ fecha: -1 })
   return products
 }
 
@@ -424,12 +424,12 @@ const buildSimpleBody = (doc, products): any => {
 }
 
 const createProductsOutOfStockReport = async (
-  collectionProduct: any,
+  CollectionProduct: any,
   companyName: string
 ): Promise<any> => {
   const doc = new jsPDF()
   doc.autoTable(buildHeader(companyName, 'Reporte de productor por agotar'))
-  const data = await getProducts(collectionProduct)
+  const data = await getProducts(CollectionProduct)
   const body: any[] = []
   data.forEach((item, index) => {
     if (item.existencia - item.existenciaMinima <= 0) {
@@ -451,12 +451,12 @@ const createProductsOutOfStockReport = async (
 }
 
 const createExpiringProducts = async (
-  collectionProduct: any,
+  CollectionProduct: any,
   companyName: string
 ): Promise<any> => {
   const doc = new jsPDF()
   doc.autoTable(buildHeader(companyName, 'Reporte de productor por vencer'))
-  const data = await getProducts(collectionProduct)
+  const data = await getProducts(CollectionProduct)
   const body: any[] = []
   data.forEach((item: any, index) => {
     if (item.fechaVencimiento) {

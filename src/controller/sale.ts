@@ -34,7 +34,7 @@ const createSale = async (req: any, res: any): Promise<void> => {
     })
     const collections = {
       collectionBillingToken: req.collectionBillingToken,
-      collectionCompany: req.collectionCompany
+      CollectionCompany: req.CollectionCompany
     }
     await updateProduct(req.controllerProduct, products, session)
 

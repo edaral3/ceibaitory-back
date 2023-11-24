@@ -1,7 +1,7 @@
 import Mongoose, { type ClientSession } from 'mongoose'
 
 const updateProduct = async (
-  collectionProduct: any,
+  CollectionProduct: any,
   products: any,
   session: ClientSession,
   incDec: 1 | -1 = 1
@@ -16,7 +16,7 @@ const updateProduct = async (
         expirationDate
       }
     }
-    const data = await collectionProduct.findByIdAndUpdate(id, config, {
+    const data = await CollectionProduct.findByIdAndUpdate(id, config, {
       session
     })
     if (!data) {
@@ -33,7 +33,7 @@ const createPurchase = async (req: any, res: any): Promise<void> => {
   session.startTransaction()
   try {
     const purchase = new req.CollectionPurchase(req.body)
-    await updateProduct(req.collectionProduct, req.body.products, session)
+    await updateProduct(req.CollectionProduct, req.body.products, session)
     await purchase.save({ session })
     await session.commitTransaction()
     res.send('OK')
@@ -61,7 +61,7 @@ const cancelPurchase = async (req: any, res: any): Promise<void> => {
   session.startTransaction()
   try {
     const data = await req.CollectionPurchase.findByIdAndDelete(req.params.id)
-    await updateProduct(req.collectionProduct, req.body.products, session, -1)
+    await updateProduct(req.CollectionProduct, req.body.products, session, -1)
     await session.commitTransaction()
     res.send(data)
   } catch (error) {

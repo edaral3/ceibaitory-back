@@ -37,7 +37,7 @@ const generateBill = async (
   companyName: string,
   body: any
 ): Promise<any> => {
-  const company = await collections.collectionCompany.finOne({
+  const company = await collections.CollectionCompany.finOne({
     name: companyName
   })
 
@@ -62,7 +62,7 @@ const cancelBill = async (
   companyName: string,
   body: any
 ): Promise<void> => {
-  const company = await collections.collectionCompany.finOne({
+  const company = await collections.CollectionCompany.finOne({
     name: companyName
   })
   const token = await getToken(companyName, company)
@@ -86,7 +86,7 @@ const getClientDetails = async (
   companyName: string,
   nit: string
 ): Promise<any> => {
-  const company = await collections.collectionCompany.finOne({
+  const company = await collections.CollectionCompany.finOne({
     name: companyName
   })
 
@@ -111,7 +111,7 @@ const getPDF = async (
   companyName: any,
   uuid: string
 ): Promise<any> => {
-  const company = await collections.collectionCompany.finOne({
+  const company = await collections.CollectionCompany.finOne({
     name: companyName
   })
 
