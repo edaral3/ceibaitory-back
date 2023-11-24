@@ -6,7 +6,7 @@ const updateProduct = async (
   products: any,
   session: ClientSession,
   incDes: 1 | -1 = -1
-) => {
+): Promise<void> => {
   for (const product of products) {
     const { id, cantidad } = product
     const config = { $inc: { existencia: cantidad * incDes } }
@@ -17,14 +17,14 @@ const updateProduct = async (
       if (!data || data.existencia - cantidad < 0) {
         throw {
           type: 400,
-          message: `No se cuenta con la cantidad suficiente del producto "${product.name}" para realizar el vale`
+          message: `not enough "${product.name}" to create credit`
         }
       }
     }
   }
 }
 
-const createSale = async (req: any, res: any) => {
+const createSale = async (req: any, res: any): Promise<void> => {
   const session = await Mongoose.startSession()
   session.startTransaction()
   try {
@@ -37,6 +37,7 @@ const createSale = async (req: any, res: any) => {
       collectionCompany: req.collectionCompany
     }
     await updateProduct(req.controllerProduct, products, session)
+
     const bill = await generateBill(
       collections,
       req.companyName,
@@ -47,19 +48,20 @@ const createSale = async (req: any, res: any) => {
     newSale.bill.uuid = bill.uuid
     newSale.bill.uuidEmision = bill.uuidEmision
 
-    const sale = new req.collectionSale(newSale)
+    const sale = new req.CollectionSale(newSale)
     await sale.save({ session })
 
     await session.commitTransaction()
     res.send('OK')
   } catch (error) {
     await session.abortTransaction()
-    return res.status(500).json({ message: 'Error creating sale' })
+    res.status(500).json({ message: 'Error creating sale' })
+  } finally {
+    await session.endSession()
   }
-  session.endSession()
 }
 
-const getOneSale = async (req: any, res: any) => {
+const getOneSale = async (req: any, res: any): Promise<any> => {
   try {
     const data = await req.controllerSale.findById(req.params.id)
     res.send(data)
@@ -72,14 +74,14 @@ const getOneSale = async (req: any, res: any) => {
 
 const getAllItems = async (req: any, res: any): Promise<any> => {
   try {
-    const items = await req.collectionSale.find()
+    const items = await req.CollectionSale.find()
     return res.send(items)
   } catch (error) {
     return res.status(500).json({ message: 'Error gettin all purchases' })
   }
 }
 
-const cancelSale = async (req: any, res: any) => {
+const cancelSale = async (req: any, res: any): Promise<void> => {
   const session = await Mongoose.startSession()
   session.startTransaction()
   try {
@@ -100,21 +102,22 @@ const cancelSale = async (req: any, res: any) => {
   } catch (error) {
     await session.abortTransaction()
     res.status(500).json({ message: 'Error cancelling sale' })
+  } finally {
+    await session.endSession()
   }
-  session.endSession()
 }
 
-const getPdfBill = async (req: any, res: any) => {
+const getPdfBill = async (req: any, res: any): Promise<void> => {
   try {
-    const data = await getPDF(
+    const pdf = await getPDF(
       req.collections,
       req.companyName,
       req.params.uuid
     )
 
-    res.send({ pdf: data })
+    res.send({ pdf })
   } catch (error) {
-    return res.status(500).json({ message: 'Error getting bill' })
+    res.status(500).json({ message: 'Error getting bill' })
   }
 }
 

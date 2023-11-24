@@ -1,7 +1,7 @@
 import Mongoose from 'mongoose'
 import config from '../config/config'
 
-const mongoConnection = () => {
+const mongoConnection = (): void => {
   Mongoose.Promise = global.Promise
   Mongoose.set('strictQuery', true)
   Mongoose.connect(config.db.mongo.host)

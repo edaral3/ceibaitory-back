@@ -6,18 +6,18 @@ const schema = Joi.object({
     .max(8)
     .trim()
     .required()
-    .messages(messages.validation_string_messages),
+    .messages(messages.validationStringMessages),
   ownerName: Joi.string()
     .max(8)
     .trim()
     .required()
-    .messages(messages.validation_string_messages),
+    .messages(messages.validationStringMessages),
 
   billingCompanyName: Joi.string()
     .max(8)
     .trim()
     .required()
-    .messages(messages.validation_string_messages),
+    .messages(messages.validationStringMessages),
   billingCompanyCredentials: Joi.disallow()
 })
 

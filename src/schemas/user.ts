@@ -7,38 +7,38 @@ const schema = Joi.object({
     .min(1)
     .trim()
     .required()
-    .messages(messages.validation_string_messages),
+    .messages(messages.validationStringMessages),
   name: Joi.string()
     .max(50)
     .min(1)
     .trim()
     .required()
-    .messages(messages.validation_string_messages),
-  pwd: Joi.string().required().messages(messages.validation_string_messages),
-  type: Joi.string().messages(messages.validation_string_messages),
+    .messages(messages.validationStringMessages),
+  pwd: Joi.string().required().messages(messages.validationStringMessages),
+  type: Joi.string().messages(messages.validationStringMessages),
   mail: Joi.string()
     .max(50)
     .min(1)
     .trim()
     .required()
-    .messages(messages.validation_string_messages),
+    .messages(messages.validationStringMessages),
   phone: Joi.string()
     .max(50)
     .min(1)
     .trim()
     .required()
-    .messages(messages.validation_string_messages),
+    .messages(messages.validationStringMessages),
   company: Joi.string()
     .max(50)
     .min(1)
     .trim()
     .required()
-    .messages(messages.validation_string_messages),
+    .messages(messages.validationStringMessages),
   branch: Joi.string()
     .max(50)
     .min(1)
     .trim()
     .required()
-    .messages(messages.validation_string_messages)
+    .messages(messages.validationStringMessages)
 })
 export default schema

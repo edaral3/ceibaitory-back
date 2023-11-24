@@ -1,12 +1,19 @@
 import trade from './trade'
-const Joi = require('joi')
-const messages = require('./messageErrors/messagesErrors')
+import Joi from 'joi'
+import messages from './messageErrors/messagesErrors'
 
 const schema = Joi.object({
-  total: Joi.number().positive().required().messages(messages.validation_string_messages),
-  description: Joi.string().max(500).trim().allow('').messages(messages.validation_string_messages),
+  total: Joi.number()
+    .positive()
+    .required()
+    .messages(messages.validationStringMessages),
+  description: Joi.string()
+    .max(500)
+    .trim()
+    .allow('')
+    .messages(messages.validationStringMessages),
   date: Joi.allow(),
-  clienteId: Joi.string().messages(messages.validation_string_messages),
+  clienteId: Joi.string().messages(messages.validationStringMessages),
   products: Joi.array().items(trade)
 })
 export default schema

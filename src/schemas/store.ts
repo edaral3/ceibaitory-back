@@ -6,13 +6,13 @@ const schema = Joi.object({
     .max(8)
     .trim()
     .required()
-    .messages(messages.validation_string_messages),
+    .messages(messages.validationStringMessages),
 
   ubication: Joi.string()
     .max(500)
     .trim()
     .allow('')
-    .messages(messages.validation_string_messages),
+    .messages(messages.validationStringMessages),
   productId: Joi.disallow()
 })
 

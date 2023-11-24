@@ -40,7 +40,7 @@ const buildProductList = (products: product[]): any => {
   return { items, taxSum }
 }
 
-const buildXmlBill = (body: body) => {
+const buildXmlBill = (body: body): string => {
   const data = buildProductList(body.products)
   return fs
     .readFileSync('./templateFirmaFactura.xml', 'utf-8')
@@ -56,7 +56,7 @@ const buildXmlBill = (body: body) => {
     .replace('$TOTALV', (Math.round(body.total * 100) / 100).toString())
 }
 
-const buildRequestBill = (signedDocument: string) => {
+const buildRequestBill = (signedDocument: string): any => {
   const uuidEmision = uuidv4().toUpperCase()
   return {
     uuidEmision,
@@ -67,7 +67,7 @@ const buildRequestBill = (signedDocument: string) => {
   }
 }
 
-const buildCancelBill = (body: any) => {
+const buildCancelBill = (body: any): string => {
   return fs
     .readFileSync('utilities/templateFirmaAnulacion.xml', 'utf-8')
     .replace('$UUIDFA', uuidv4().toUpperCase())
@@ -78,7 +78,7 @@ const buildCancelBill = (body: any) => {
     .replace('$MOTIVO', body.reason)
 }
 
-const buildClientRequest = (nit: string) => {
+const buildClientRequest = (nit: string): string => {
   return fs
     .readFileSync('utilities/tempateDatosCliente.xml', 'utf-8')
     .replace('$NIT', nit)

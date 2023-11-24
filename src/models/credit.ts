@@ -1,10 +1,8 @@
-import Mongoose from 'mongoose'
+import { Schema } from 'mongoose'
 import trade from './trade'
 
-const schema = Mongoose.Schema
-
-const getSchema = (company: string) => {
-  const payments = new Mongoose.Schema({
+const getSchema = (company: string): Schema => {
+  const payments = new Schema({
     date: {
       type: Date,
       required: true
@@ -15,7 +13,7 @@ const getSchema = (company: string) => {
     }
   })
 
-  const credit = new Mongoose.Schema({
+  const credit = new Schema({
     state: {
       type: Number,
       default: 0
@@ -41,7 +39,7 @@ const getSchema = (company: string) => {
       required: false
     },
     client: {
-      type: schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: `client_${company}`,
       require: true
     },

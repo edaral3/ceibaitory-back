@@ -3,7 +3,7 @@ import config from '../config/config'
 
 const redisConfig = config.db.redis
 let redisClient: any
-const redisConnection = () => {
+const redisConnection = (): any => {
   if (redisClient) return redisClient
 
   redisClient = createClient({

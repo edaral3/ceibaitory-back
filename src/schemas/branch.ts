@@ -6,18 +6,18 @@ const schema = Joi.object({
     .max(8)
     .trim()
     .required()
-    .messages(messages.validation_string_messages),
+    .messages(messages.validationStringMessages),
 
   direccion: Joi.string()
     .max(500)
     .trim()
     .allow('')
-    .messages(messages.validation_string_messages),
+    .messages(messages.validationStringMessages),
   phone: Joi.string()
     .max(50)
     .trim()
     .required()
-    .messages(messages.validation_string_messages)
+    .messages(messages.validationStringMessages)
 })
 
 export default schema

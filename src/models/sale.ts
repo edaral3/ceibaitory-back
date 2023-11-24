@@ -1,8 +1,8 @@
-import Mongoose from 'mongoose'
+import { Schema } from 'mongoose'
 import trade from './trade'
 
-const getSchema = () => {
-  const sale = new Mongoose.Schema({
+const getSchema = (): Schema => {
+  const sale = new Schema({
     uuid: {
       type: String,
       default: ''

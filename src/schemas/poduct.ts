@@ -7,47 +7,47 @@ const schema = Joi.object({
     .min(1)
     .trim()
     .required()
-    .messages(messages.validation_string_messages),
+    .messages(messages.validationStringMessages),
   barcode: Joi.string()
     .max(50)
     .trim()
     .allow(null)
-    .messages(messages.validation_string_messages),
+    .messages(messages.validationStringMessages),
   priceCost: Joi.number()
     .positive()
     .required()
     .allow(0)
-    .messages(messages.validation_string_messages),
+    .messages(messages.validationStringMessages),
   salesPrice: Joi.number()
     .positive()
     .required()
     .allow(0)
-    .messages(messages.validation_string_messages),
+    .messages(messages.validationStringMessages),
   existence: Joi.number()
     .integer()
     .positive()
     .allow(0)
     .required()
-    .messages(messages.validation_string_messages),
+    .messages(messages.validationStringMessages),
   minExistence: Joi.number()
     .integer()
     .positive()
     .allow(0)
-    .messages(messages.validation_string_messages),
+    .messages(messages.validationStringMessages),
   expirationDate: Joi.date()
     .allow(null)
     .preferences({ dateFormat: 'date' })
-    .messages(messages.validation_date_messages),
+    .messages(messages.validationDateMessages),
   description: Joi.string()
     .max(500)
     .trim()
     .allow('')
-    .messages(messages.validation_string_messages),
+    .messages(messages.validationStringMessages),
   ubication: Joi.string()
     .max(500)
     .trim()
     .allow('')
-    .messages(messages.validation_string_messages),
+    .messages(messages.validationStringMessages),
   supplier: Joi.disallow(),
   branch: Joi.disallow()
 })

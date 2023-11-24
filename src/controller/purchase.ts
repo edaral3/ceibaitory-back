@@ -5,7 +5,7 @@ const updateProduct = async (
   products: any,
   session: ClientSession,
   incDec: 1 | -1 = 1
-) => {
+): Promise<void> => {
   for (const product of products) {
     const { id, existence, priceCost, salesPrice, expirationDate } = product
     const config = {
@@ -20,55 +20,59 @@ const updateProduct = async (
       session
     })
     if (!data) {
-      throw { message: 'Error updating product', product }
+      throw {
+        type: 400,
+        message: `not enough "${product.name}" to create credit`
+      }
     }
   }
 }
 
-const createPurchase = async (req: any, res: any) => {
+const createPurchase = async (req: any, res: any): Promise<void> => {
   const session = await Mongoose.startSession()
   session.startTransaction()
   try {
-    const purchase = new req.collectionPurchase(req.body)
+    const purchase = new req.CollectionPurchase(req.body)
     await updateProduct(req.collectionProduct, req.body.products, session)
     await purchase.save({ session })
     await session.commitTransaction()
     res.send('OK')
   } catch (error) {
     await session.abortTransaction()
-    return res.status(500).json({ message: 'Error in purchase' })
+    res.status(500).json({ message: 'Error in purchase' })
+  } finally {
+    await session.endSession()
   }
-  session.endSession()
 }
 
-const getOnePurchase = async (req: any, res: any) => {
+const getOnePurchase = async (req: any, res: any): Promise<void> => {
   try {
-    const purchase = await req.collectionPurchase
-      .findById(req.params.id)
-      .populate('supplier')
-    return res.send(purchase)
+    const purchase = await req.CollectionPurchase.findById(
+      req.params.id
+    ).populate('supplier')
+    res.send(purchase)
   } catch (error) {
-    return res.status(500).json({ message: 'Error getting one purchase' })
+    res.status(500).json({ message: 'Error getting one purchase' })
   }
 }
 
-const cancelPurchase = async (req: any, res: any) => {
+const cancelPurchase = async (req: any, res: any): Promise<void> => {
   const session = await Mongoose.startSession()
   session.startTransaction()
   try {
-    const data = await req.collectionPurchase.findByIdAndDelete(req.params.id)
+    const data = await req.CollectionPurchase.findByIdAndDelete(req.params.id)
     await updateProduct(req.collectionProduct, req.body.products, session, -1)
     await session.commitTransaction()
-    return res.send(data)
+    res.send(data)
   } catch (error) {
     await session.abortTransaction()
-    return res.status(500).json({ message: 'Error deletting purchase' })
+    res.status(500).json({ message: 'Error deletting purchase' })
   }
 }
 
 const getAllPurchases = async (req: any, res: any): Promise<any> => {
   try {
-    const items = await req.collectionPurchase.find()
+    const items = await req.CollectionPurchase.find()
     return res.send(items)
   } catch (error) {
     return res.status(500).json({ message: 'Error gettin all purchases' })

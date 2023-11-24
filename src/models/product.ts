@@ -1,9 +1,7 @@
-import Mongoose from 'mongoose'
+import { Schema } from 'mongoose'
 
-const schema = Mongoose.Schema
-
-const getSchema = (company: string) => {
-  const product = new Mongoose.Schema({
+const getSchema = (company: string): Schema => {
+  const product = new Schema({
     name: {
       type: String,
       required: true
@@ -44,12 +42,12 @@ const getSchema = (company: string) => {
       default: false
     },
     supplier: {
-      type: schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: `supplier_${company}`,
       default: null
     },
     branch: {
-      type: schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: `branch_${company}`,
       default: null
     }

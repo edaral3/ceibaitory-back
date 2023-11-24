@@ -1,11 +1,9 @@
-import Mongoose from 'mongoose'
+import { Schema } from 'mongoose'
 
-const schema = Mongoose.Schema
-
-const getSchema = (company: string) => {
-  const store = new Mongoose.Schema({
+const getSchema = (company: string): Schema => {
+  const store = new Schema({
     productId: {
-      type: schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: `product_${company}`,
       required: true
     },

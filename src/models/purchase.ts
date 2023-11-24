@@ -1,10 +1,8 @@
-import Mongoose from 'mongoose'
+import { Schema } from 'mongoose'
 import trade from './trade'
 
-const schema = Mongoose.Schema
-
-const getSchema = (company: string) => {
-  const purchase = new Mongoose.Schema({
+const getSchema = (company: string): Schema => {
+  const purchase = new Schema({
     date: {
       type: Date,
       required: true
@@ -18,7 +16,7 @@ const getSchema = (company: string) => {
       required: false
     },
     supplier: {
-      type: schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: `supplier_${company}`,
       required: false
     },

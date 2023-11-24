@@ -1,7 +1,7 @@
-import Mongoose from 'mongoose'
+import { Schema } from 'mongoose'
 
-const getSchema = () => {
-  const company = new Mongoose.Schema({
+const getSchema = (): Schema => {
+  const company = new Schema({
     name: {
       type: String,
       required: false

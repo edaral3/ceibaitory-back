@@ -1,8 +1,8 @@
 import { jsPDF } from 'jspdf'
 import 'jspdf-autotable'
 
-const getSalesPerDay = async (collectionSale: any, date) => {
-  const data = await collectionSale.aggregate([
+const getSalesPerDay = async (CollectionSale: any, date): Promise<any> => {
+  const data = await CollectionSale.aggregate([
     {
       $match: {
         $and: [
@@ -28,8 +28,8 @@ const getSalesPerDay = async (collectionSale: any, date) => {
   return data[0].total
 }
 
-const getAmountSales = async (collectionSale: any, date) => {
-  const data = await collectionSale.aggregate([
+const getAmountSales = async (CollectionSale: any, date): Promise<any> => {
+  const data = await CollectionSale.aggregate([
     {
       $match: {
         $and: [
@@ -54,7 +54,7 @@ const getAmountSales = async (collectionSale: any, date) => {
   return data[0].total
 }
 
-const getUtility = (data: any) => {
+const getUtility = (data: any): number => {
   let total = 0
   for (let i = 0; i < data.cantidad.length; i++) {
     const cantidad = data.cantidad[i]
@@ -67,8 +67,8 @@ const getUtility = (data: any) => {
   return Math.round(total * 100) / 100
 }
 
-const getUtilityPerDay = async (collectionSale: any, date) => {
-  const data = await collectionSale.aggregate([
+const getUtilityPerDay = async (CollectionSale: any, date): Promise<any> => {
+  const data = await CollectionSale.aggregate([
     {
       $match: {
         $and: [
@@ -99,7 +99,7 @@ const getUtilityPerDay = async (collectionSale: any, date) => {
   return getUtility(data[0])
 }
 
-const getInventoryExcel = async (req: any, res: any) => {
+const getInventoryExcel = async (req: any, res: any): Promise<void> => {
   try {
     const products = await req.collectionProduct.find().sort({ fecha: -1 })
     let csvResponse = '#,Nombre,Cantidad,Precio Costo\n'
@@ -113,13 +113,13 @@ const getInventoryExcel = async (req: any, res: any) => {
         .replace(',', '')}\n`
     })
 
-    return res.send({ csv: csvResponse })
+    res.send({ csv: csvResponse })
   } catch (error) {
-    return res.status(500).json({ message: 'Error creando el reporte' })
+    res.status(500).json({ message: 'Error creando el reporte' })
   }
 }
 
-const getABC = (list: any) => {
+const getABC = (list: any): any => {
   const listSorted = list.sort((a, b) => {
     const worthA = a.precioVenta
     const worthB = b.precioVenta
@@ -153,7 +153,7 @@ const getABC = (list: any) => {
   return { A, B, C }
 }
 
-const filterByCategory = (itemsCategory, items) => {
+const filterByCategory = (itemsCategory, items): any => {
   let newArray = items.filter((item) => {
     return itemsCategory.includes(item.nombre)
   })
@@ -169,7 +169,7 @@ const filterByCategory = (itemsCategory, items) => {
   return { labels, series: [listSeries] }
 }
 
-const getTop10ABC = async (req: any, res: any) => {
+const getTop10ABC = async (req: any, res: any): Promise<void> => {
   const date = req.query.date
 
   try {
@@ -180,8 +180,7 @@ const getTop10ABC = async (req: any, res: any) => {
         }
       }
     }
-    let data
-    data = await req.collectionProduct.aggregate([
+    const data = await req.collectionProduct.aggregate([
       find,
       {
         $project: {
@@ -225,14 +224,14 @@ const getTop10ABC = async (req: any, res: any) => {
   }
 }
 
-const getDayReports = async (req: any, res: any) => {
+const getDayReports = async (req: any, res: any): Promise<any> => {
   const date = req.query.date
-  const collectionSale = req.collectionSale
+  const CollectionSale = req.CollectionSale
   try {
     const data = {
-      ventasDiarias: await getSalesPerDay(collectionSale, date),
-      utilidadPorDia: await getUtilityPerDay(collectionSale, date),
-      cantidadVentas: await getAmountSales(collectionSale, date)
+      ventasDiarias: await getSalesPerDay(CollectionSale, date),
+      utilidadPorDia: await getUtilityPerDay(CollectionSale, date),
+      cantidadVentas: await getAmountSales(CollectionSale, date)
     }
     return res.send(data)
   } catch (error) {
@@ -240,7 +239,7 @@ const getDayReports = async (req: any, res: any) => {
   }
 }
 
-const buildHeader = (companyName: string, typeReport: string) => {
+const buildHeader = (companyName: string, typeReport: string): any => {
   return {
     body: [
       [
@@ -269,7 +268,7 @@ const buildHeader = (companyName: string, typeReport: string) => {
   }
 }
 
-const buildDate = (startDate, endDate) => {
+const buildDate = (startDate, endDate): any => {
   return {
     body: [
       [
@@ -285,8 +284,12 @@ const buildDate = (startDate, endDate) => {
   }
 }
 
-const getListSaleRange = async (collectionSale, startDate, endDate) => {
-  const data = await collectionSale.aggregate([
+const getListSaleRange = async (
+  CollectionSale,
+  startDate,
+  endDate
+): Promise<any> => {
+  const data = await CollectionSale.aggregate([
     {
       $match: {
         fecha: { $gte: startDate, $lt: endDate }
@@ -297,8 +300,9 @@ const getListSaleRange = async (collectionSale, startDate, endDate) => {
   return data
 }
 
-const getProducts = async (collectionProduct) => {
-  return await collectionProduct.find().sort({ fecha: -1 })
+const getProducts = async (collectionProduct): Promise<any> => {
+  const products = await collectionProduct.find().sort({ fecha: -1 })
+  return products
 }
 
 const tableTemplateHead = [
@@ -309,7 +313,7 @@ const tableTemplateHead = [
   'Total'
 ]
 
-const getColorTble = (type) => {
+const getColorTble = (type: string): any => {
   let color = '#7DCEA0'
   switch (type) {
     case 'NF':
@@ -328,7 +332,7 @@ const getColorTble = (type) => {
   }
 }
 
-const buildCompleteBody = async (doc, products) => {
+const buildCompleteBody = (doc, products): any => {
   let total = 0
   let totalUtilidades = 0
   products.forEach((sale) => {
@@ -362,7 +366,7 @@ const buildCompleteBody = async (doc, products) => {
   return { total, totalUtilidades }
 }
 
-const buildSimpleBody = async (doc, products) => {
+const buildSimpleBody = (doc, products): any => {
   let total = 0
   let totalUtilidades = 0
   const productos: any[] = []
@@ -422,7 +426,7 @@ const buildSimpleBody = async (doc, products) => {
 const createProductsOutOfStockReport = async (
   collectionProduct: any,
   companyName: string
-) => {
+): Promise<any> => {
   const doc = new jsPDF()
   doc.autoTable(buildHeader(companyName, 'Reporte de productor por agotar'))
   const data = await getProducts(collectionProduct)
@@ -449,7 +453,7 @@ const createProductsOutOfStockReport = async (
 const createExpiringProducts = async (
   collectionProduct: any,
   companyName: string
-) => {
+): Promise<any> => {
   const doc = new jsPDF()
   doc.autoTable(buildHeader(companyName, 'Reporte de productor por vencer'))
   const data = await getProducts(collectionProduct)
@@ -477,14 +481,14 @@ const createExpiringProducts = async (
   return doc.output('datauristring')
 }
 
-const getMoneyFormat = (number) => {
+const getMoneyFormat = (number: any): string => {
   return number.toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })
 }
 
-const getTotals = (totales) => {
+const getTotals = (totales: any): any => {
   return {
     body: [
       [
@@ -555,21 +559,21 @@ const getTotals = (totales) => {
 }
 
 const createSalesReport = async (
-  collectionSale: any,
+  CollectionSale: any,
   companyName: string,
   startDate: any,
   endDate: any,
   typeReport: string
-) => {
+): Promise<any> => {
   const doc = new jsPDF()
   doc.autoTable(buildHeader(companyName, 'Reporte de ventas'))
   doc.autoTable(buildDate(startDate, endDate))
-  const products = getListSaleRange(collectionSale, startDate, endDate)
+  const products = getListSaleRange(CollectionSale, startDate, endDate)
   let totals: any
   if (typeReport === 'simple') {
-    totals = await buildSimpleBody(doc, products)
+    totals = buildSimpleBody(doc, products)
   } else if (typeReport === 'complete') {
-    totals = await buildCompleteBody(doc, products)
+    totals = buildCompleteBody(doc, products)
   }
 
   doc.autoTable(getTotals(totals))
@@ -579,11 +583,11 @@ const createSalesReport = async (
   return doc.output('datauristring')
 }
 
-const getSalesReport = async (req: any, res: any) => {
+const getSalesReport = async (req: any, res: any): Promise<void> => {
   const { startDate, endDate, typeReport } = req.body
   try {
     const pdf = await createSalesReport(
-      req.collectionSale,
+      req.CollectionSale,
       req.companyName,
       startDate,
       endDate,
@@ -593,16 +597,19 @@ const getSalesReport = async (req: any, res: any) => {
   } catch (error) {}
 }
 
-const getProductsOutOfStockReport = async (req: any, res: any) => {
+const getProductsOutOfStockReport = async (
+  req: any,
+  res: any
+): Promise<void> => {
   const pdf = await createProductsOutOfStockReport(
-    req.collectionSale,
+    req.CollectionSale,
     req.companyName
   )
   res.send({ pdf })
 }
 
-const getExpiringProducts = async (req: any, res: any) => {
-  const pdf = await createExpiringProducts(req.collectionSale, req.companyName)
+const getExpiringProducts = async (req: any, res: any): Promise<void> => {
+  const pdf = await createExpiringProducts(req.CollectionSale, req.companyName)
   res.send({ pdf })
 }
 

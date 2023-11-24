@@ -14,25 +14,21 @@ import root from './routes/root'
 
 const app = express()
 
-const getCors = (allow) => {
+const getCors = (): any => {
   const restrictedCors = {
     origin: [
-      'https://www.agropecuaria-aldana.com',
-      'https://agropecuaria-aldana.com'
+      '*'
     ],
     methods: ['GET', 'POST', 'DELETE', 'UPDATE', 'PUT'],
     headers: ['authorization', 'Content-Type']
   }
 
-  return allow === 'true' ? null : restrictedCors
+  return restrictedCors
 }
 
-app.use(cors(getCors(process.env.COSR)))
+app.use(cors(getCors()))
 
 app.use(express.json())
-// app.use(express.urlencoded({ extended: false }))
-// app.use(cookieParser())
-// app.use(express.static(path.join(__dirname, 'public')))
 
 // Mongodb
 mongoConnection()
@@ -52,14 +48,14 @@ app.use('/store', store)
 app.use('/sale', product)
 app.use('/credit', product)
 
-const PORT = process.env.PORT || '3000'
+const PORT = process.env.PORT ?? '3000'
 app.set('port', PORT)
 
 const server = http.createServer(app)
 server.listen(PORT)
 server.on('listening', onListening)
 
-function onListening () {
+function onListening (): void {
   server.address()
   console.log('Listening on ' + PORT)
 }

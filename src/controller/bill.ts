@@ -10,8 +10,8 @@ import {
 
 const redisClient = redisConnection()
 
-const deleteToken = async (companyName: string) => {
-  return await redisClient.del(`${companyName}_token`)
+const deleteToken = async (companyName: string): Promise<void> => {
+  await redisClient.del(`${companyName}_token`)
 }
 
 const getToken = async (companyName: string, company: any): Promise<string> => {
@@ -19,16 +19,17 @@ const getToken = async (companyName: string, company: any): Promise<string> => {
   if (!exist) {
     await setToken(companyName, company)
   }
-  return await redisClient.get(`${companyName}_token`)
+  const token = await redisClient.get(`${companyName}_token`)
+  return token
 }
 
-const setToken = async (companyName: string, company: any): Promise<string> => {
+const setToken = async (companyName: string, company: any): Promise<void> => {
   let token: any
   switch (company.billingCompanyName) {
     case certifiers.MEGAPRINT:
       token = generateTokenMP(token)
   }
-  return await redisClient.set(`${companyName}_token`, token)
+  await redisClient.set(`${companyName}_token`, token)
 }
 
 const generateBill = async (
@@ -56,7 +57,11 @@ const generateBill = async (
   return billData
 }
 
-const cancelBill = async (collections: any, companyName: string, body: any) => {
+const cancelBill = async (
+  collections: any,
+  companyName: string,
+  body: any
+): Promise<void> => {
   const company = await collections.collectionCompany.finOne({
     name: companyName
   })
@@ -80,7 +85,7 @@ const getClientDetails = async (
   collections: any,
   companyName: string,
   nit: string
-) => {
+): Promise<any> => {
   const company = await collections.collectionCompany.finOne({
     name: companyName
   })
@@ -101,7 +106,11 @@ const getClientDetails = async (
   return billData
 }
 
-const getPDF = async (collections: any, companyName: any, uuid: string) => {
+const getPDF = async (
+  collections: any,
+  companyName: any,
+  uuid: string
+): Promise<any> => {
   const company = await collections.collectionCompany.finOne({
     name: companyName
   })

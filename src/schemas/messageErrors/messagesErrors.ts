@@ -1,4 +1,4 @@
-const validation_string_messages = {
+const validationStringMessages = {
   'string.base': 'A text value was expected',
   'string.empty': 'Empty values are not allowed',
   'string.min': 'A minimun length of {#limit} is required',
@@ -6,11 +6,11 @@ const validation_string_messages = {
   'any.required': 'This value is required'
 }
 
-const validation_select_messages = {
+const validationSelectMessages = {
   'any.only': 'Selected value "{#value}" is not valid'
 }
 
-const validation_date_messages = {
+const validationDateMessages = {
   'date.base': 'Invalid date selected',
   'date.strict': 'Invalid date selected',
   'date.ref': 'Invalid date selected',
@@ -19,7 +19,7 @@ const validation_date_messages = {
 }
 
 export default {
-  validation_string_messages,
-  validation_select_messages,
-  validation_date_messages
+  validationStringMessages,
+  validationSelectMessages,
+  validationDateMessages
 }

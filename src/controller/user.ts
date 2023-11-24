@@ -7,7 +7,7 @@ import {
 } from '../common/CRUD/genericCRUD'
 import { getClientDetails } from './bill'
 
-const getBillInformation = async (req: any, res: any) => {
+const getBillInformation = async (req: any, res: any): Promise<void> => {
   try {
     const billingInformation = await getClientDetails(
       req.collections,
@@ -16,7 +16,7 @@ const getBillInformation = async (req: any, res: any) => {
     )
     res.send(billingInformation)
   } catch (error: any) {
-    return res.status(500).json({ message: error.message })
+    res.status(500).json({ message: error.message })
   }
 }
 

@@ -7,7 +7,7 @@ import {
   buildCancelBill
 } from '../utils/megaprint/certifier'
 
-const getToken = async (credentials: string) => {
+const getToken = async (credentials: string): Promise<string> => {
   const newToken = await axios.post(
     'https://apiv2.ifacere-fel.com/api/solicitarToken',
     credentials,
@@ -20,7 +20,7 @@ const getToken = async (credentials: string) => {
   return `Bearer ${newToken.data.match(/<token>([^<]*)<\/token>/)[1]}`
 }
 
-const generateTokenMP = async (company: any) => {
+const generateTokenMP = async (company: any): Promise<string> => {
   try {
     const token = await getToken(company.billingCompanyCredentials.credentials)
     return token
@@ -80,7 +80,7 @@ const registerBillDocument = async (
   }
 }
 
-const generateBillMP = async (token: string, body: any) => {
+const generateBillMP = async (token: string, body: any): Promise<any> => {
   const generateXML = buildXmlBill(body)
 
   const signedBill = await signBill(generateXML, token)
@@ -90,7 +90,7 @@ const generateBillMP = async (token: string, body: any) => {
   return registedBill
 }
 
-const getPDFMP = async (token: string, uuid: string) => {
+const getPDFMP = async (token: string, uuid: string): Promise<any> => {
   const template = `
     <?xml version="1.0" encoding="UTF-8"?>
     <RetornaPDFRequest>
@@ -135,7 +135,7 @@ const registerCancelBillDocument = async (
   }
 }
 
-const cancelBillMP = async (token: any, body: any) => {
+const cancelBillMP = async (token: any, body: any): Promise<any> => {
   const generateXML = buildCancelBill(body)
   const signedCancelBill = await signBill(generateXML, token)
   if (signedCancelBill === 'invalid Token') return signedCancelBill
@@ -144,7 +144,10 @@ const cancelBillMP = async (token: any, body: any) => {
   return cancelBill
 }
 
-const getClientInformationMP = async (token: string, nit: string) => {
+const getClientInformationMP = async (
+  token: string,
+  nit: string
+): Promise<any> => {
   const res = await axios.post(
     'https://apiv2.ifacere-fel.com/api/retornarDatosCliente',
     buildClientRequest(nit),
@@ -169,7 +172,7 @@ const getClientInformationMP = async (token: string, nit: string) => {
   }
 }
 
-const beautifulerName = (name) => {
+const beautifulerName = (name): string => {
   if (name.includes(',')) {
     return name.replace(',', '').replace(' ', ' ')
   } else {
