@@ -1,39 +1,29 @@
-import { getCollection } from '../models'
+import { getCollection } from "../models";
 
-const setCollection = (base: string) => {
+const setCollection = (collectionName: string) => {
   return (req: any, _res: any, next: any) => {
-    req.CollectionCrud = getCollection(base, req.companyName)
-    if (base === 'user') {
-      req.CollectionCompany = getCollection('company', req.companyName)
-      req.collectionBillingToken = getCollection(
-        'billingToken',
-        req.companyName
-      )
-    } else if (base === 'purchase') {
-      req.CollectionProduct = getCollection('product', req.companyName)
-      req.CollectionPurchase = getCollection(base, req.companyName)
-    } else if (base === 'sale') {
-      req.CollectionProduct = getCollection('product', req.companyName)
-      req.collectionBillingToken = getCollection(
-        'billingToken',
-        req.companyName
-      )
-      req.CollectionCompany = getCollection('company', req.companyName)
-      req.CollectionSale = getCollection(base, req.companyName)
-    } else if (base === 'credit') {
-      req.CollectionProduct = getCollection('product', req.companyName)
-      req.collectionBillingToken = getCollection(
-        'billingToken',
-        req.companyName
-      )
-      req.CollectionCompany = getCollection('company', req.companyName)
-      req.CollectionSale = getCollection(base, req.companyName)
-    } else if (base === 'report') {
-      req.CollectionProduct = getCollection('product', req.companyName)
-      req.CollectionSale = getCollection(base, req.companyName)
+    req.CollectionCrud = getCollection(collectionName, req.companyName);
+    const companyName = req.companyName;
+    switch (collectionName) {
+      case "user":
+        req.CollectionCompany = getCollection("company", companyName);
+      case "purchase":
+        req.CollectionProduct = getCollection("product", companyName);
+        req.CollectionPurchase = getCollection(collectionName, companyName);
+      case "sale":
+        req.CollectionProduct = getCollection("product", companyName);
+        req.CollectionCompany = getCollection("company", companyName);
+        req.CollectionSale = getCollection(collectionName, companyName);
+      case "credit":
+        req.CollectionProduct = getCollection("product", companyName);
+        req.CollectionCompany = getCollection("company", companyName);
+        req.CollectionSale = getCollection(collectionName, companyName);
+      case "report":
+        req.CollectionProduct = getCollection("product", companyName);
+        req.CollectionSale = getCollection(collectionName, companyName);
     }
-    next()
-  }
-}
+    next();
+  };
+};
 
-export { setCollection }
+export { setCollection };
