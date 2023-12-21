@@ -161,10 +161,10 @@ const getClientInformationMP = async (
   if (validateResponse(res.data)) return 'invalid Token'
 
   if (res.data.match(/<tipo_respuesta>([^<]*)<\/tipo_respuesta>/)[1] === '0') {
-    const nombre = res.data.match(/<nombre>([^<]*)<\/nombre>/)[1]
+    const name = res.data.match(/<nombre>([^<]*)<\/nombre>/)[1]
     const direccion = res.data.match(/<direccion>([^<]*)<\/direccion>/)[1]
     return {
-      nombre: beautifulerName(nombre).replace('undefined ', ''),
+      name: beautifulerName(name).replace('undefined ', ''),
       direccion
     }
   } else {

@@ -17,10 +17,6 @@ const trade = new Mongoose.Schema({
     type: Number,
     required: true
   },
-  total: {
-    type: Number,
-    required: true
-  },
   expirationDate: {
     type: Date,
     default: null

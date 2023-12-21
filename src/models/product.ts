@@ -37,7 +37,7 @@ const getSchema = (company: string): Schema => {
       default: null
     },
     ubication: {
-      type: Boolean,
+      type: String,
       required: false,
       default: false
     },

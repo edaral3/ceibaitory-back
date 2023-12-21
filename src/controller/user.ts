@@ -9,12 +9,13 @@ import { getClientDetails } from './bill'
 
 const getBillInformation = async (req: any, res: any): Promise<void> => {
   try {
-    const billingInformation = await getClientDetails(
+    res.send({name:'EDGAR ARNOLDO', direction: 'granua aldana'});
+    /*const billingInformation = await getClientDetails(
       req.collections,
       req.companyName,
       req.params.nit
     )
-    res.send(billingInformation)
+    res.send(billingInformation)*/
   } catch (error: any) {
     res.status(500).json({ message: error.message })
   }

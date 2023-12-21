@@ -12,19 +12,15 @@ const getSchema = (company: string): Schema => {
     },
     pwd: {
       type: String,
-      required: false
+      required: true
     },
     type: {
       type: String,
       required: true
     },
-    mail: {
-      type: String,
-      required: true
-    },
     phone: {
       type: String,
-      required: true
+      required: false
     },
     company: {
       type: Schema.Types.ObjectId,

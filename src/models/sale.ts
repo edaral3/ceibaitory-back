@@ -1,12 +1,10 @@
 import { Schema } from 'mongoose'
 import trade from './trade'
 
+
+ 
 const getSchema = (): Schema => {
-  const sale = new Schema({
-    uuid: {
-      type: String,
-      default: ''
-    },
+  const Bill = new Schema({
     name: {
       type: String,
       required: false
@@ -14,6 +12,34 @@ const getSchema = (): Schema => {
     nit: {
       type: String,
       required: false
+    },  
+    direction: {
+      type: String,
+      required: false,
+      default: null
+    },  
+    uuid: {
+      type: String,
+      default: '',
+      required: false
+    },
+    uuidEmission: {
+      type: String,
+      required: false,
+      default: null
+    },
+    uuidCanceled: {
+      type: String,
+      required: false,
+      default: null
+    },
+  })
+
+  const sale = new Schema({
+    bill: {
+      type: Bill,
+      required: false,
+      default: null
     },
     total: {
       type: Number,
@@ -25,31 +51,19 @@ const getSchema = (): Schema => {
     },
     description: {
       type: String,
-      required: false
+      default: null
     },
     salesType: {
       type: String,
-      required: true
-    },
-    direction: {
-      type: String,
-      default: ''
+      default: null
     },
     cancellationDate: {
       type: Date,
-      required: false
-    },
+      default: null
+    },      
     canceled: {
       type: Boolean,
       default: false
-    },
-    uuidEmission: {
-      type: String,
-      default: ''
-    },
-    uuidCanceled: {
-      type: String,
-      default: ''
     },
     products: [trade]
   })

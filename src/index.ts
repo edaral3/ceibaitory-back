@@ -4,12 +4,15 @@ import http from 'http'
 import express from 'express'
 import cors from 'cors'
 
+import sale from './routes/sale'
+import purchase from './routes/purchase'
 import client from './routes/client'
 import store from './routes/store'
 import branch from './routes/branch'
 import user from './routes/user'
 import supplier from './routes/supplier'
 import product from './routes/product'
+import credit from './routes/credit'
 import root from './routes/root'
 
 const app = express()
@@ -20,7 +23,8 @@ const getCors = (): any => {
       '*'
     ],
     methods: ['GET', 'POST', 'DELETE', 'UPDATE', 'PUT'],
-    headers: ['authorization', 'Content-Type']
+    headers: ['*']
+    //headers: ['authorization', 'Content-Type']
   }
 
   return restrictedCors
@@ -42,13 +46,13 @@ app.use('/client', client)
 app.use('/user', user)
 app.use('/supplier', supplier)
 app.use('/product', product)
-app.use('/purchase', product)
+app.use('/purchase', purchase)
 app.use('/branch', branch)
 app.use('/store', store)
-app.use('/sale', product)
-app.use('/credit', product)
+app.use('/sale', sale)
+app.use('/credit', credit)
 
-const PORT = process.env.PORT ?? '3000'
+const PORT = process.env.PORT ?? '3005'
 app.set('port', PORT)
 
 const server = http.createServer(app)

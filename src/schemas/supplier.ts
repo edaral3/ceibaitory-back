@@ -8,7 +8,7 @@ const schema = Joi.object({
     .trim()
     .required()
     .messages(messages.validationStringMessages),
-  mail: Joi.string()
+  email: Joi.string()
     .max(50)
     .trim()
     .allow('')

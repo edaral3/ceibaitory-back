@@ -6,7 +6,7 @@ const getSchema = (): Schema => {
       type: String,
       required: true
     },
-    mail: {
+    email: {
       type: String,
       required: false
     },

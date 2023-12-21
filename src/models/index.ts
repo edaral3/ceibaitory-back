@@ -7,8 +7,9 @@ import supplier from './supplier'
 import credit from './credit'
 import sale from './sale'
 import purchase from './purchase'
+import company from './company'
 
-const models = { client, user, product, supplier, credit, sale, purchase }
+const models = { client, user, product, supplier, credit, sale, purchase, company }
 
 const getCollection = (collectionName: string, companyName: string): any => {
   const schemaName = `${collectionName}_${companyName}`

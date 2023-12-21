@@ -3,7 +3,7 @@ import cliente from './client'
 import company from './company'
 import credit from './credit'
 import payment from './payment'
-import poduct from './poduct'
+import product from './product'
 import purchase from './purchase'
 import sale from './sale'
 import store from './store'
@@ -16,7 +16,7 @@ export default {
   company,
   credit,
   payment,
-  poduct,
+  product,
   purchase,
   sale,
   store,
