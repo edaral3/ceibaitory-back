@@ -6,7 +6,7 @@ const getSchema = (): Schema => {
       type: String,
       required: true
     },
-    direccion: {
+    direction: {
       type: String,
       required: false
     },

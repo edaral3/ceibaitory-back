@@ -6,7 +6,8 @@ import { validator } from '../middleware/bodyValidator'
 
 const router = express.Router()
 
-router.post('/', validator('purchase'), validateToken(['']), setCollection('purchase'), purchase.create)
+router.post('/', validator('purchase'), setCollection('purchase'), purchase.create)
+//router.post('/', validator('purchase'), validateToken(['']), setCollection('purchase'), purchase.create)
 
 router.delete('/:id', validateToken(['']), setCollection('purchase'), purchase.cancel)
 

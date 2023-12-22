@@ -6,6 +6,14 @@ const getSchema = (): Schema => {
       type: String,
       required: true
     },
+    nit: {
+      type: String,
+      required: false
+    },
+    direction: {
+      type: String,
+      required: false
+    },
     email: {
       type: String,
       required: false

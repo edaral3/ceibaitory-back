@@ -8,12 +8,15 @@ const schema = Joi.object({
     .trim()
     .required()
     .messages(messages.validationStringMessages),
+  nit: Joi.string().allow(''),
+  direction: Joi.string().allow(''),
   phone: Joi.string()
     .max(50)
     .trim()
     .required()
     .messages(messages.validationStringMessages),
   email: Joi.string()
+  .allow(null)
     .max(50)
     .trim()
     .allow('')

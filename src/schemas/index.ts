@@ -1,5 +1,5 @@
 import branch from './branch'
-import cliente from './client'
+import client from './client'
 import company from './company'
 import credit from './credit'
 import payment from './payment'
@@ -12,7 +12,7 @@ import user from './user'
 
 export default {
   branch,
-  cliente,
+  client,
   company,
   credit,
   payment,

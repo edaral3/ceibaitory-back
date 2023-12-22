@@ -7,8 +7,7 @@ const schema = Joi.object({
     .trim()
     .required()
     .messages(messages.validationStringMessages),
-
-  direccion: Joi.string()
+  direction: Joi.string()
     .max(500)
     .trim()
     .allow('')

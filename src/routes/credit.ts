@@ -6,7 +6,8 @@ import { validator } from '../middleware/bodyValidator'
 
 const router = express.Router()
 
-router.post('/', validator('credit'), validateToken(['']), setCollection('credit'), credit.create)
+router.post('/', validator('credit'), setCollection('credit'), credit.create)
+//router.post('/', validator('credit'), validateToken(['']), setCollection('credit'), credit.create)
 
 router.put('/pay/:id', validator('payment'), validateToken(['']), setCollection('credit'), credit.pay)
 

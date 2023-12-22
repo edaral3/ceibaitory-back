@@ -162,10 +162,10 @@ const getClientInformationMP = async (
 
   if (res.data.match(/<tipo_respuesta>([^<]*)<\/tipo_respuesta>/)[1] === '0') {
     const name = res.data.match(/<nombre>([^<]*)<\/nombre>/)[1]
-    const direccion = res.data.match(/<direccion>([^<]*)<\/direccion>/)[1]
+    const direction = res.data.match(/<direccion>([^<]*)<\/direccion>/)[1]
     return {
       name: beautifulerName(name).replace('undefined ', ''),
-      direccion
+      direction
     }
   } else {
     return 'NIT does not exist'

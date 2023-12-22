@@ -7,22 +7,22 @@ const updateProduct = async (
   incDec: 1 | -1 = 1
 ): Promise<void> => {
   for (const product of products) {
-    const { id, existence, priceCost, salesPrice, expirationDate } = product
+    const { _id, amount, priceCost, salesPrice, expirationDate } = product
     const config = {
-      $inc: { existence: existence * incDec },
+      $inc: { existence: amount * incDec },
       $set: {
         priceCost,
         salesPrice,
         expirationDate
       }
     }
-    const data = await CollectionProduct.findByIdAndUpdate(id, config, {
+    const data = await CollectionProduct.findByIdAndUpdate(_id, config, {
       session
     })
     if (!data) {
       throw {
         type: 400,
-        message: `not enough "${product.name}" to create credit`
+        message: `not enough "${product.name}" to delete purchase`
       }
     }
   }
