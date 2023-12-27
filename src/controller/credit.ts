@@ -25,30 +25,19 @@ const updateProduct = async (
 };
 
 const createCredit = async (req: any, res: any): Promise<void> => {
-  const session = await Mongoose.startSession();
-  session.startTransaction();
+  const session = await Mongoose.startSession()
+  session.startTransaction()
   try {
-    const data = await req.CollectionCredit.findByIdAndUpdate(
-      req.params.id,
-      {
-        $set: {
-          canceled: true,
-          cancellationDate: new Date(),
-        },
-      },
-      { session }
-    );
-    await updateProduct(req.CollectionProduct, data.products, session, 1);
-    if(data.bill){
-      await cancelBill(req.collections, req.companyName, req.body.products);
-    }
-    await session.commitTransaction();
-    res.send("OK");
+    const credit = new req.CollectionCredit(req.body)
+    await updateProduct(req.CollectionProduct, req.body.products, session)
+    await credit.save({ session })
+    await session.commitTransaction()
+    res.send('OK')
   } catch (error) {
-    await session.abortTransaction();
-    res.status(500).json({ message: "Error cancelling sale" });
+    await session.abortTransaction()
+    res.status(500).json({ message: 'Error creating credit' })
   } finally {
-    await session.endSession();
+    await session.endSession()
   }
 }
 
@@ -69,8 +58,8 @@ const payCredit = async (req: any, res: any): Promise<void> => {
     const data = await req.CollectionCredit.findByIdAndUpdate(
       req.params.id,
       {
-        $push: { pagos: req.body },
-        $set: { state: paid >= credit.total ? 2 : 1, paid }
+        $push: { payments: req.body },
+        $set: { state: paid >= credit.total ? 2 : 1, paid: paid }
       },
       { session }
     )
