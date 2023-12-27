@@ -13,7 +13,43 @@ const getSchema = (company: string): Schema => {
     }
   })
 
+  const Bill = new Schema({
+    name: {
+      type: String,
+      required: false
+    },
+    nit: {
+      type: String,
+      required: false
+    },  
+    direction: {
+      type: String,
+      required: false,
+      default: null
+    },  
+    uuid: {
+      type: String,
+      default: '',
+      required: false
+    },
+    uuidEmission: {
+      type: String,
+      required: false,
+      default: null
+    },
+    uuidCanceled: {
+      type: String,
+      required: false,
+      default: null
+    },
+  })
+
   const credit = new Schema({
+    bill: {
+      type: Bill,
+      required: false,
+      default: null
+    },
     state: {
       type: Number,
       default: 0
@@ -33,6 +69,14 @@ const getSchema = (company: string): Schema => {
     description: {
       type: String,
       required: false
+    },
+    cancellationDate: {
+      type: Date,
+      default: null
+    },      
+    canceled: {
+      type: Boolean,
+      default: false
     },
     reminder: {
       type: String,

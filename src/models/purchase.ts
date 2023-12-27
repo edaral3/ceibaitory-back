@@ -15,6 +15,14 @@ const getSchema = (company: string): Schema => {
       type: String,
       required: false
     },
+    cancellationDate: {
+      type: Date,
+      default: null
+    },      
+    canceled: {
+      type: Boolean,
+      default: false
+    },
     supplier: {
       type: Schema.Types.ObjectId,
       ref: `supplier_${company}`,

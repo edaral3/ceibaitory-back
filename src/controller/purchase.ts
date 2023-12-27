@@ -49,7 +49,7 @@ const getOnePurchase = async (req: any, res: any): Promise<void> => {
   try {
     const purchase = await req.CollectionPurchase.findById(
       req.params.id
-    ).populate('supplier')
+    )
     res.send(purchase)
   } catch (error) {
     res.status(500).json({ message: 'Error getting one purchase' })
@@ -57,16 +57,27 @@ const getOnePurchase = async (req: any, res: any): Promise<void> => {
 }
 
 const cancelPurchase = async (req: any, res: any): Promise<void> => {
-  const session = await Mongoose.startSession()
-  session.startTransaction()
+  const session = await Mongoose.startSession();
+  session.startTransaction();
   try {
-    const data = await req.CollectionPurchase.findByIdAndDelete(req.params.id)
-    await updateProduct(req.CollectionProduct, req.body.products, session, -1)
-    await session.commitTransaction()
-    res.send(data)
+    const data = await req.CollectionPurchase.findByIdAndUpdate(
+      req.params.id,
+      {
+        $set: {
+          canceled: true,
+          cancellationDate: new Date(),
+        },
+      },
+      { session }
+    );
+    await updateProduct(req.CollectionProduct, data.products, session, 1);
+    await session.commitTransaction();
+    res.send("OK");
   } catch (error) {
-    await session.abortTransaction()
-    res.status(500).json({ message: 'Error deletting purchase' })
+    await session.abortTransaction();
+    res.status(500).json({ message: "Error cancelling sale" });
+  } finally {
+    await session.endSession();
   }
 }
 

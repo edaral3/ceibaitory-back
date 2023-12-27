@@ -3,7 +3,8 @@ import { getCollection } from "../models";
 const setCollection = (collectionName: string) => {
   return (req: any, _res: any, next: any) => {
     //const companyName = req.companyName;
-    const companyName = 'test';
+    const companyName = 'tests';
+    req.companyName = 'tests'
     req.CollectionCrud = getCollection(collectionName,companyName);
     switch (collectionName) {
       case "user":
@@ -19,9 +20,10 @@ const setCollection = (collectionName: string) => {
         req.CollectionSale = getCollection(collectionName, companyName);
         break;
       case "credit":
+        req.CollectionClient= getCollection("client", companyName);
         req.CollectionProduct = getCollection("product", companyName);
         req.CollectionCompany = getCollection("company", companyName);
-        req.CollectionSale = getCollection(collectionName, companyName);
+        req.CollectionCredit = getCollection(collectionName, companyName);
         break;
       case "report":
         req.CollectionProduct = getCollection("product", companyName);

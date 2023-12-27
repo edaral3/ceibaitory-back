@@ -2,7 +2,7 @@ import Mongoose, { type ClientSession } from "mongoose";
 import { generateBill, cancelBill, getPDF } from "./bill";
 
 const updateProduct = async (
-  ControllerProduct: any,
+  CollectionProduct: any,
   products: any,
   session: ClientSession,
   incDes: 1 | -1 = -1
@@ -10,7 +10,7 @@ const updateProduct = async (
   for (const product of products) {
     const { _id, amount } = product;
     const config = { $inc: { existence: amount * incDes } };
-    const data = await ControllerProduct.findByIdAndUpdate(_id, config, {
+    const data = await CollectionProduct.findByIdAndUpdate(_id, config, {
       session,
     });
     if (incDes === -1) {
@@ -78,7 +78,7 @@ const createSale = async (req: any, res: any): Promise<void> => {
 
 const getOneSale = async (req: any, res: any): Promise<any> => {
   try {
-    const data = await req.controllerSale.findById(req.params.id);
+    const data = await req.CollectionSale.findById(req.params.id);
     res.send(data);
   } catch (error) {
     return res
@@ -100,18 +100,20 @@ const cancelSale = async (req: any, res: any): Promise<void> => {
   const session = await Mongoose.startSession();
   session.startTransaction();
   try {
-    const { id, products } = req.body;
-    await updateProduct(req.controllerProduct, products, session, 1);
-    await req.controllerSale.findByIdAndUpdate(
-      id,
+    const data = await req.CollectionSale.findByIdAndUpdate(
+      req.params.id,
       {
         $set: {
-          anulado: true,
+          canceled: true,
+          cancellationDate: new Date(),
         },
       },
       { session }
     );
-    await cancelBill(req.collections, req.companyName, req.body.products);
+    await updateProduct(req.CollectionProduct, data.products, session, 1);
+    if(data.bill){
+      await cancelBill(req.collections, req.companyName, req.body.products);
+    }
     await session.commitTransaction();
     res.send("OK");
   } catch (error) {

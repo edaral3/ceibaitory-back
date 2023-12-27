@@ -1,42 +1,54 @@
 import Mongoose, { type ClientSession } from 'mongoose'
+import { generateBill, cancelBill, getPDF } from "./bill";
 
 const updateProduct = async (
-  controllerProduct: any,
+  ControllerProduct: any,
   products: any,
   session: ClientSession,
   incDes: 1 | -1 = -1
 ): Promise<void> => {
   for (const product of products) {
-    const { id, cantidad } = product
-    const config = { $inc: { existencia: cantidad * incDes } }
-    const data = await controllerProduct.findByIdAndUpdate(id, config, {
-      session
-    })
+    const { _id, amount } = product;
+    const config = { $inc: { existence: amount * incDes } };
+    const data = await ControllerProduct.findByIdAndUpdate(_id, config, {
+      session,
+    });
     if (incDes === -1) {
-      if (!data || data.existencia - cantidad < 0) {
+      if (!data || data.existence - amount < 0) {
         throw {
           type: 400,
-          message: `not enough "${product.name}" to create credit`
-        }
+          message: `not enough "${product.name}" to create credit`,
+        };
       }
     }
   }
-}
+};
 
 const createCredit = async (req: any, res: any): Promise<void> => {
-  const session = await Mongoose.startSession()
-  session.startTransaction()
+  const session = await Mongoose.startSession();
+  session.startTransaction();
   try {
-    const credit = new req.ControllerCredit(req.body)
-    await updateProduct(req.controllerProduct, req.body.productos, session)
-    await credit.save({ session })
-    await session.commitTransaction()
-    res.send('OK')
+    const data = await req.CollectionCredit.findByIdAndUpdate(
+      req.params.id,
+      {
+        $set: {
+          canceled: true,
+          cancellationDate: new Date(),
+        },
+      },
+      { session }
+    );
+    await updateProduct(req.CollectionProduct, data.products, session, 1);
+    if(data.bill){
+      await cancelBill(req.collections, req.companyName, req.body.products);
+    }
+    await session.commitTransaction();
+    res.send("OK");
   } catch (error) {
-    await session.abortTransaction()
-    res.status(500).json({ message: 'Error creating credit' })
+    await session.abortTransaction();
+    res.status(500).json({ message: "Error cancelling sale" });
   } finally {
-    await session.endSession()
+    await session.endSession();
   }
 }
 
@@ -52,9 +64,9 @@ const payCredit = async (req: any, res: any): Promise<void> => {
   const session = await Mongoose.startSession()
   session.startTransaction()
   try {
-    const credit = await req.ControllerCredit.findById(req.params.id)
+    const credit = await req.CollectionCredit.findById(req.params.id)
     const paid = getTotalUntilDate(credit.payments)
-    const data = await req.ControllerCredit.findByIdAndUpdate(
+    const data = await req.CollectionCredit.findByIdAndUpdate(
       req.params.id,
       {
         $push: { pagos: req.body },
@@ -74,7 +86,7 @@ const payCredit = async (req: any, res: any): Promise<void> => {
 
 const getOneCredit = async (req: any, res: any): Promise<void> => {
   try {
-    const data = await req.collectionCredit
+    const data = await req.CollectionCredit
       .findById(req.params.id)
       .populate('client')
     res.send(data)
@@ -84,29 +96,36 @@ const getOneCredit = async (req: any, res: any): Promise<void> => {
 }
 
 const cancelCredit = async (req: any, res: any): Promise<void> => {
-  const session = await Mongoose.startSession()
-  session.startTransaction()
-
+  const session = await Mongoose.startSession();
+  session.startTransaction();
   try {
-    const data = await req.collectionCredit.findByIdAndUpdate(
-      req.query.id,
-      { $set: { state: 3 } },
+    const data = await req.CollectionCredit.findByIdAndUpdate(
+      req.params.id,
+      {
+        $set: {
+          canceled: true,
+          cancellationDate: new Date(),
+        },
+      },
       { session }
-    )
-    await updateProduct(req.controllerProduct, data.products, session, 1)
-    await session.commitTransaction()
-    res.send(data)
+    );
+    await updateProduct(req.CollectionProduct, data.products, session, 1);
+    if(data.bill){
+      await cancelBill(req.collections, req.companyName, req.body.products);
+    }
+    await session.commitTransaction();
+    res.send("OK");
   } catch (error) {
-    await session.abortTransaction()
-    res.status(500).json({ message: 'Error canceling credit' })
+    await session.abortTransaction();
+    res.status(500).json({ message: "Error cancelling sale" });
   } finally {
-    await session.endSession()
+    await session.endSession();
   }
 }
 
 const unpaidCredit = async (req: any, res: any): Promise<void> => {
   try {
-    const data = await req.collectionCredit.findByIdAndUpdate(req.query.id, {
+    const data = await req.CollectionCredit.findByIdAndUpdate(req.query.id, {
       $set: 4
     })
     res.send(data)
@@ -117,7 +136,7 @@ const unpaidCredit = async (req: any, res: any): Promise<void> => {
 
 const getAllCredits = async (req: any, res: any): Promise<any> => {
   try {
-    const items = await req.collectionCredit.find()
+    const items = await req.CollectionCredit.find().populate(`client`)
     res.send(items)
   } catch (error) {
     res.status(500).json({ message: 'Error gettin all purchases' })
