@@ -9,6 +9,8 @@ import sale from './sale'
 import store from './store'
 import supplier from './supplier'
 import user from './user'
+import userOwner from './userOwner'
+import login from './login'
 
 export default {
   branch,
@@ -21,5 +23,7 @@ export default {
   sale,
   store,
   supplier,
-  user
+  user,
+  userOwner,
+  login
 }

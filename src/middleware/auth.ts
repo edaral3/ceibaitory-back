@@ -6,12 +6,12 @@ const validateToken = (roles: string[]) => {
     const token = req.headers.authorization
     jwt.verify(token, config.secret, (error, decoded) => {
       if (error) {
-        return res.status(400).json({
+        return res.status(401).json({
           message: 'Invalid token'
         })
       }
       if (!roles.includes(decoded.type)) {
-        return res.status(400).json({
+        return res.status(401).json({
           message:
             'Permissions error'
         })

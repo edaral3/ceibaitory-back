@@ -1,19 +1,19 @@
 const validationStringMessages = {
-  'string.base': 'A text value was expected',
-  'string.empty': 'Empty values are not allowed',
-  'string.min': 'A minimun length of {#limit} is required',
-  'string.max': 'A maximum length of {#limit} is required',
-  'any.required': 'This value is required'
+  'string.base': 'Se esperaba texto',
+  'string.empty': 'No se permiten valores vacios',
+  'string.min': 'Se requiere una longitud minima de {#limit}',
+  'string.max': 'La longitud maxima es de {#limit}',
+  'any.required': 'Este valor es requerido'
 }
 
 const validationSelectMessages = {
-  'any.only': 'Selected value "{#value}" is not valid'
+  'any.only': 'El valor seleccionado no es valido "{#value}"'
 }
 
 const validationDateMessages = {
-  'date.base': 'Invalid date selected',
-  'date.strict': 'Invalid date selected',
-  'date.ref': 'Invalid date selected',
+  'date.base': 'Fecha seleccionada invalida',
+  'date.strict': 'Fecha seleccionada invalida',
+  'date.ref': 'Fecha seleccionada invalida',
   'date.greater': 'Date must be greater than {#limit}',
   'date.less': 'Date must be less than {#limit}'
 }

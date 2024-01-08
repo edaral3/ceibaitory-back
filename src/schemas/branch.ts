@@ -3,20 +3,20 @@ import messages from './messageErrors/messagesErrors'
 
 const schema = Joi.object({
   name: Joi.string()
-    .max(8)
+    .max(50)
     .trim()
     .required()
-    .messages(messages.validationStringMessages),
+    .messages(messages.validationStringMessages).label('Nombre'),
   direction: Joi.string()
     .max(500)
     .trim()
     .allow('')
-    .messages(messages.validationStringMessages),
+    .messages(messages.validationStringMessages).label('Direccion'),
   phone: Joi.string()
     .max(50)
     .trim()
     .required()
-    .messages(messages.validationStringMessages)
+    .messages(messages.validationStringMessages).label('Celular')
 })
 
 export default schema

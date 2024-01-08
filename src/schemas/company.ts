@@ -6,7 +6,7 @@ const schema = Joi.object({
     .max(8)
     .trim()
     .required()
-    .messages(messages.validationStringMessages),
+    .messages(messages.validationStringMessages).label('Nombre'),
   ownerName: Joi.string()
     .max(8)
     .trim()

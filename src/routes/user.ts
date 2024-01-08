@@ -2,12 +2,15 @@ import express from 'express'
 import user from '../controller/user'
 import { setCollection } from '../middleware/collection'
 import { validateToken } from '../middleware/auth'
+import { encriptData } from '../middleware/encriptData'
 import { validator } from '../middleware/bodyValidator'
 
 const router = express.Router()
 
 //router.post('/', validator('user'), setCollection('user'), user.create)
-router.post('/', validator('user'), setCollection('user'), user.create)
+router.post('/', validator('user'), encriptData('user'), setCollection('user'), user.create)
+
+router.post('/userOwner', validator('userOwner'), encriptData('user'), setCollection('user'), user.createOwnerUser)
 
 //router.put('/:id', validateToken(['']), validator('user'), setCollection('user'), user.update)
 router.put('/:id', validator('user'), setCollection('user'), user.update)

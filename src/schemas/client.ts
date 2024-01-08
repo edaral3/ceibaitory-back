@@ -7,19 +7,19 @@ const schema = Joi.object({
     .min(1)
     .trim()
     .required()
-    .messages(messages.validationStringMessages),
-  nit: Joi.string().allow(''),
-  direction: Joi.string().allow(''),
+    .messages(messages.validationStringMessages).label('Nombre'),
+  nit: Joi.string().allow('').label('NIT'),
+  direction: Joi.string().allow('').label('Direccion'),
   phone: Joi.string()
     .max(50)
     .trim()
     .required()
-    .messages(messages.validationStringMessages),
+    .messages(messages.validationStringMessages).label('Celular'),
   email: Joi.string()
   .allow(null)
     .max(50)
     .trim()
     .allow('')
-    .messages(messages.validationStringMessages)
+    .messages(messages.validationStringMessages).label('Correo')
 })
 export default schema

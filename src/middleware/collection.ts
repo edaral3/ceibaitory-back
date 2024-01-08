@@ -5,10 +5,13 @@ const setCollection = (collectionName: string) => {
     //const companyName = req.companyName;
     const companyName = 'tests';
     req.companyName = 'tests'
-    req.CollectionCrud = getCollection(collectionName,companyName);
+    req.collectionName = collectionName
+    if (collectionName !== 'report') req.CollectionCrud = getCollection(collectionName,companyName);
     switch (collectionName) {
       case "user":
-        req.CollectionCompany = getCollection("company", companyName);
+        req.CollectionCompany = getCollection("company", '');
+        req.CollectionBranch = getCollection("branch", companyName);
+        req.CollectionCrud = getCollection('user', companyName);
         break;
       case "purchase":
         req.CollectionProduct = getCollection("product", companyName);
@@ -27,7 +30,7 @@ const setCollection = (collectionName: string) => {
         break;
       case "report":
         req.CollectionProduct = getCollection("product", companyName);
-        req.CollectionSale = getCollection(collectionName, companyName);
+        req.CollectionSale = getCollection("sale", companyName);
         break;
     }
     next();

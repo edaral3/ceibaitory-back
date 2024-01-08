@@ -9,10 +9,10 @@ const schema = Joi.object({
     .required()
     .messages(messages.validationStringMessages),
   barcode: Joi.string()
+    .allow(null)
     .max(50)
     .trim()
-    .allow(null)
-    .messages(messages.validationStringMessages),
+    .messages(messages.validationStringMessages).label('Codigo de barras'),
   priceCost: Joi.number()
     .positive()
     .required()

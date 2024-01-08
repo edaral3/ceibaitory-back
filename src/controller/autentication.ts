@@ -4,15 +4,16 @@ import config from '../config/config'
 
 const login = async (req: any, res: any): Promise<any> => {
   try {
-    const msj = 'User or password wrong'
-    const user = await req.collection.findOne({ user: req.body.user })
+    const msj = 'Usuario o contraseña incorrecto'
+    const user = await req.CollectionCrud.findOne({ user: req.body.user })
     if (!user) {
       return res.status(401).json({ message: msj })
     }
     if (bcrypt.compareSync(req.body.pwd, user.pwd)) {
       const newToken = {
         id: user._id,
-        company: req.body.company
+        company: req.body.company,
+        branch: req.body.branch
       }
       const jwToken = jwt.sign(JSON.stringify(newToken), config.secret)
 
@@ -23,7 +24,7 @@ const login = async (req: any, res: any): Promise<any> => {
   } catch (error) {
     return res
       .status(500)
-      .json({ message: 'OHHH, NOOO!!! was a problem in login' })
+      .json({ message: 'OHHH, NOOO!!! hubo un problema iniciando sesion' })
   }
 }
 

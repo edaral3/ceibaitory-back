@@ -8,7 +8,8 @@ const getSchema = (company: string): Schema => {
     },
     barcode: {
       type: String,
-      required: false
+      required: false,
+      index: true, unique: true, sparse: true
     },
     priceCost: {
       type: Number,

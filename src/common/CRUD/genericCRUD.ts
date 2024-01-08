@@ -65,7 +65,15 @@ const getOneItem = async (req: any, res: any): Promise<any> => {
 
 const getAllItems = async (req: any, res: any): Promise<any> => {
   try {
-    const items = await req.CollectionCrud.find();
+    let items: any;
+    if (req.collectionName === "product") {
+      items = await req.CollectionCrud.find().populate("supplier");
+    } 
+    else if (req.collectionName === "user") {
+      items = await req.CollectionCrud.find().populate("branch");
+    } else {
+      items = await req.CollectionCrud.find();
+    }
     return res.send(items);
   } catch (error) {
     return res

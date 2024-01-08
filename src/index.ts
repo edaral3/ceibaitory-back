@@ -13,6 +13,8 @@ import user from './routes/user'
 import supplier from './routes/supplier'
 import product from './routes/product'
 import credit from './routes/credit'
+import autenticacion from './routes/autenticacion'
+import reports from './routes/reports'
 import root from './routes/root'
 
 const app = express()
@@ -51,6 +53,8 @@ app.use('/branch', branch)
 app.use('/store', store)
 app.use('/sale', sale)
 app.use('/credit', credit)
+app.use('/login', autenticacion)
+app.use('/reports', reports)
 
 const PORT = process.env.PORT ?? '3005'
 app.set('port', PORT)

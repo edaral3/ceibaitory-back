@@ -4,16 +4,20 @@ import { setCollection } from '../middleware/collection'
 import { validateToken } from '../middleware/auth'
 
 const router = express.Router()
-router.get('/dayReports', validateToken(['']), setCollection('report'), reports.getDayReports)
+router.get('/dailyReports', setCollection('report'), reports.getDayReports)
 
-router.get('/InventoryExcelReport', validateToken(['']), setCollection('report'), reports.getInventoryExcel)
+router.get('/montlyReports', setCollection('report'), reports.montlyReports)
 
-router.get('/salesReport', validateToken(['']), setCollection('report'), reports.getSalesReport)
+router.get('/inventoryExcelReport', setCollection('report'), reports.getInventoryExcel)
 
-router.get('/productsOutOfStockReport', validateToken(['']), setCollection('report'), reports.getProductsOutOfStockReport)
+router.get('/salesReport', setCollection('report'), reports.getSalesReport)
 
-router.get('/expiringProducts', validateToken(['']), setCollection('report'), reports.getExpiringProducts)
+router.get('/productsOutOfStockReport', setCollection('report'), reports.getProductsOutOfStockReport)
 
-router.get('/top10ABC', validateToken(['']), setCollection('report'), reports.getTop10ABC)
+router.get('/expiringProducts', setCollection('report'), reports.getExpiringProducts)
+
+router.get('/top10ABC', setCollection('report'), reports.getTop10ABC)
+
+//router.get('/top10ABC', validateToken(['']), setCollection('report'), reports.getTop10ABC)
 
 export default router
