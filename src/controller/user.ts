@@ -1,4 +1,5 @@
 import Mongoose, { type ClientSession } from "mongoose";
+import { existValueError } from "../common/CRUD/errors";
 import {
   createItem,
   deleteItem,
@@ -39,7 +40,7 @@ const createBranch = async (
   branchBody: any,
   session: ClientSession
 ) => {
-  const CollectionBranch =  getCollection("branch", companyName)
+  const CollectionBranch = getCollection("branch", companyName);
   const branch = await CollectionBranch(branchBody);
   const data = await branch.save({ session });
   return data._id;
@@ -58,12 +59,14 @@ const createUser = async (
 const createOwnerUser = async (req: any, res: any): Promise<void> => {
   const session = await Mongoose.startSession();
   session.startTransaction();
+
+  let status = "compañia";
   try {
     const { user, name, phone, pwd, companyName, phoneCompany, direction } =
       req.body;
-
     const companyBody = {
       name: companyName,
+      schemaName: companyName.trim().replaceAll(" ", "-"),
       ownerName: name,
     };
     const companyId = await createCompany(
@@ -72,17 +75,15 @@ const createOwnerUser = async (req: any, res: any): Promise<void> => {
       session
     );
 
+    status = "sucursal";
     const branchBody = {
       name: "Principal",
       direction: direction,
       phone: phoneCompany,
     };
-    const branchId = await createBranch(
-      companyName,
-      branchBody,
-      session
-    );
+    const branchId = await createBranch(companyName, branchBody, session);
 
+    status = "usuario";
     const userBody = {
       user: user,
       name: name,
@@ -90,15 +91,26 @@ const createOwnerUser = async (req: any, res: any): Promise<void> => {
       type: "owner",
       phone: phone,
       company: companyId,
-      branch: branchId,
+      branch: [branchId],
     };
     await createUser(req.CollectionCrud, userBody, session);
 
     await session.commitTransaction();
     res.send({ message: "Empresa creado con exito" });
   } catch (error: any) {
-    await session.abortTransaction();
-    res.status(500).json({ message: error.message });
+    try {
+      await session.abortTransaction();
+    } catch (error) {}
+    if (error.code === 11000) {
+      res
+        .status(400)
+        .json({
+          type: "error",
+          message: `Ya existe el/la ${status}, ingresa otro nombre`,
+        });
+    } else {
+      res.status(500).json({ message: `Error creating company` });
+    }
   } finally {
     await session.endSession();
   }

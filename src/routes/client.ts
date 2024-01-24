@@ -6,18 +6,14 @@ import { validator } from '../middleware/bodyValidator'
 
 const router = express.Router()
 
-router.post('/', validator('client'), setCollection('client'), client.create)
-//router.post('/', validator('client'), validateToken(['']), setCollection('client'), client.create)
+router.post('/', validateToken(['owner', 'admin']), validator('client'), setCollection('client'), client.create)
 
-router.put('/:id', validator('client'), setCollection('client'), client.update)
-//router.put('/:id', validator('client'), validateToken(['']), setCollection('client'), client.update)
+router.put('/:id', validateToken(['owner', 'admin']), validator('client'), setCollection('client'), client.update)
 
-router.delete('/:id', setCollection('client'), client.delete)
-//router.delete('/:id', validateToken(['']), setCollection('client'), client.delete)
+router.delete('/:id', validateToken(['owner', 'admin']), setCollection('client'), client.delete)
 
-router.get('/:id', validateToken(['']), setCollection('client'), client.getOne)
+router.get('/:id', validateToken(['owner', 'admin']), setCollection('client'), client.getOne)
 
-//router.get('/', validateToken(['']), setCollection('client'), client.getAll)
-router.get('/', setCollection('client'), client.getAll)
+router.get('/', validateToken(['owner', 'admin']), setCollection('client'), client.getAll)
 
 export default router

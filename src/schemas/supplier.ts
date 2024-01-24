@@ -14,10 +14,15 @@ const schema = Joi.object({
     .allow('')
     .messages(messages.validationStringMessages),
   phone: Joi.string()
-    .max(50)
-    .trim()
-    .required()
-    .messages(messages.validationStringMessages),
+      .max(50)
+      .trim()
+      .required()
+      .messages(messages.validationStringMessages),
+  companyName: Joi.string()
+        .max(50)
+        .trim()
+        .required()
+        .messages(messages.validationStringMessages),
   company: Joi.string()
     .max(50)
     .trim()

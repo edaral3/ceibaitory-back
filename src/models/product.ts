@@ -9,7 +9,7 @@ const getSchema = (company: string): Schema => {
     barcode: {
       type: String,
       required: false,
-      index: true, unique: true, sparse: true
+      index: true,
     },
     priceCost: {
       type: Number,
@@ -53,8 +53,6 @@ const getSchema = (company: string): Schema => {
       default: null
     }
   })
-  product.index({ barcode: 1 }, { unique: true, sparse: true })
-  product.index({ name: 1 }, { unique: true })
   return product
 }
 

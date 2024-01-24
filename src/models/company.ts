@@ -6,6 +6,10 @@ const getSchema = (): Schema => {
       type: String,
       required: false
     },
+    schemaName: {
+      type: String,
+      required: false
+    },
     ownerName: {
       type: String,
       required: false

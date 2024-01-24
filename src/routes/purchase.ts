@@ -6,18 +6,12 @@ import { validator } from '../middleware/bodyValidator'
 
 const router = express.Router()
 
-router.post('/', validator('purchase'), setCollection('purchase'), purchase.create)
-//router.post('/', validator('purchase'), validateToken(['']), setCollection('purchase'), purchase.create)
+router.post('/', validateToken(['owner', 'admin']), validator('purchase'), setCollection('purchase'), purchase.create)
 
-router.delete('/:id', setCollection('purchase'), purchase.cancel)
-//router.delete('/:id', validateToken(['']), setCollection('purchase'), purchase.cancel)
+router.delete('/:id', validateToken(['owner', 'admin']),setCollection('purchase'), purchase.cancel)
 
-router.get('/:id', setCollection('purchase'), purchase.getOne)
+router.get('/:id', validateToken(['owner', 'admin']),setCollection('purchase'), purchase.getOne)
 
-router.get('/', setCollection('purchase'), purchase.getAll)
-
-//router.get('/:id', validateToken(['']), setCollection('purchase'), purchase.getOne)
-
-//router.get('/', validateToken(['']), setCollection('purchase'), purchase.getAll)
+router.get('/', validateToken(['owner', 'admin']), setCollection('purchase'), purchase.getAll)
 
 export default router

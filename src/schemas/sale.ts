@@ -9,6 +9,7 @@ const schema = Joi.object({
   clientNit: Joi.string().max(500).trim().allow('').messages(messages.validationStringMessages),
   date: Joi.allow(),
   direction: Joi.allow(),
-  products: Joi.array().items(trade)
+  products: Joi.array().items(trade),
+  branch: Joi.string().max(500).trim(),
 })
 export default schema

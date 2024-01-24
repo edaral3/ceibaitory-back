@@ -23,21 +23,12 @@ const schema = Joi.object({
     .min(1)
     .trim()
     .messages(messages.validationStringMessages),
-    company: Joi.allow(null),
-    branch: Joi.allow(null),
-    /*company: Joi.string()
-    .optional()
-    .allow(null)
-    .max(50)
-    .min(1)
-    .trim()
-    //.required()
-    .messages(messages.validationStringMessages),*/
-  /*branch: Joi.string()
+  company: Joi.string()
     .max(50)
     .min(1)
     .trim()
     .required()
-    .messages(messages.validationStringMessages)/*/
+    .messages(messages.validationStringMessages),
+  branch: Joi.array()
 })
 export default schema

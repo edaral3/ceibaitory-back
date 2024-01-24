@@ -24,8 +24,9 @@ const models = {
 
 const getCollection = (collectionName: string, companyName: string): any => {
   const schemaName = `${collectionName}_${
-    companyName !== "user" ? companyName : ""
+    collectionName !== "user" ? companyName : ""
   }`;
+
   try {
     return Mongoose.model(schemaName);
   } catch (error) {

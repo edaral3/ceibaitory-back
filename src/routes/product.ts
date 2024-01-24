@@ -6,18 +6,14 @@ import { validator } from '../middleware/bodyValidator'
 
 const router = express.Router()
 
-//router.post('/', validator('product'), validateToken(['']), setCollection('product'), product.create)
-router.post('/', validator('product'), setCollection('product'), product.create)
+router.post('/', validateToken(['owner', 'admin']), validator('product'), setCollection('product'), product.create)
 
-router.put('/:id', validator('product'), setCollection('product'), product.update)
-//router.put('/:id', validator('product'), validateToken(['']), setCollection('product'), product.update)
+router.put('/:id', validateToken(['owner', 'admin']), validator('product'), setCollection('product'), product.update)
 
-//router.delete('/:id', validateToken(['']), setCollection('product'), product.delete)
-router.delete('/:id', setCollection('product'), product.delete)
+router.delete('/:id', validateToken(['owner', 'admin']), setCollection('product'), product.delete)
 
-router.get('/:id', validateToken(['']), setCollection('product'), product.getOne)
+router.get('/:id',validateToken(['owner', 'admin']), setCollection('product'), product.getOne)
 
-//router.get('/', validateToken(['']), setCollection('product'), product.getAll)
-router.get('/', setCollection('product'), product.getAll)
+router.get('/', validateToken(['owner', 'admin']), setCollection('product'), product.getAll)
 
 export default router

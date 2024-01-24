@@ -14,8 +14,13 @@ const getSchema = (): Schema => {
       type: String,
       required: true
     },
-    company: {
+    companyName: {
       type: String,
+      required: false
+    },
+    company: {
+      type: Schema.Types.ObjectId,
+      ref: `company_`,
       required: false
     },
     description: {

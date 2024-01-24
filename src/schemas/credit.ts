@@ -13,7 +13,8 @@ const schema = Joi.object({
     .allow('')
     .messages(messages.validationStringMessages),
   date: Joi.allow(),
-  client: Joi.string().allow(null).messages(messages.validationStringMessages),
-  products: Joi.array().items(trade)
+  client: Joi.string().min(1).messages(messages.validationStringMessages).label('Cliente'),
+  products: Joi.array().items(trade),
+  branch: Joi.string().max(500).trim(),
 })
 export default schema

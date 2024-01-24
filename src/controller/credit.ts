@@ -41,10 +41,10 @@ const createCredit = async (req: any, res: any): Promise<void> => {
   }
 }
 
-const getTotalUntilDate = (payments: any): number => {
-  let paid = 0
+const getTotalUntilDate = (amount: number, payments: any): number => {
+  let paid = amount
   for (const pay of payments) {
-    paid += pay.amount
+    paid += Number(pay.amount)
   }
   return paid
 }
@@ -54,7 +54,7 @@ const payCredit = async (req: any, res: any): Promise<void> => {
   session.startTransaction()
   try {
     const credit = await req.CollectionCredit.findById(req.params.id)
-    const paid = getTotalUntilDate(credit.payments)
+    const paid = getTotalUntilDate(Number(req.body.amount), credit.payments)
     const data = await req.CollectionCredit.findByIdAndUpdate(
       req.params.id,
       {
@@ -125,7 +125,7 @@ const unpaidCredit = async (req: any, res: any): Promise<void> => {
 
 const getAllCredits = async (req: any, res: any): Promise<any> => {
   try {
-    const items = await req.CollectionCredit.find().populate(`client`)
+    const items = await req.CollectionCredit.find().populate(`client`).sort({date:-1})
     res.send(items)
   } catch (error) {
     res.status(500).json({ message: 'Error gettin all purchases' })

@@ -1,4 +1,5 @@
 import { existValueError } from "./errors";
+import bcrypt from 'bcrypt'
 
 const createItem = async (req: any, res: any): Promise<any> => {
   try {
@@ -22,6 +23,12 @@ const createItem = async (req: any, res: any): Promise<any> => {
 
 const deleteItem = async (req: any, res: any): Promise<any> => {
   try {
+    if (req.collectionName === "user") {
+      const user = await req.CollectionCrud.findById(req.params.id);
+      if (user.type === 'owner'){
+        return res.status(400).json({ type: "warning", message: 'No es posible elimiar usuarios propietarios' });
+      }
+    }
     await req.CollectionCrud.findByIdAndDelete(req.params.id);
     return res.send(`${req.CollectionCrud.modelName} deleted`);
   } catch (error) {
@@ -33,9 +40,28 @@ const deleteItem = async (req: any, res: any): Promise<any> => {
 
 const updateItem = async (req: any, res: any): Promise<any> => {
   try {
-    const data = await req.CollectionCrud.findByIdAndUpdate(req.params.id, {
-      $set: req.body,
-    });
+    let data: any
+    if (req.collectionName === "user") {
+      const user = await req.CollectionCrud.findById(req.params.id);
+      if (user.type === 'owner' && req.body.type === 'owner'){
+        return res.status(400).json({ type: "warning", message: 'No es posible actualizar el tipo de usuarios propietarios' });
+      }
+    }
+    else if (req.collectionName === "product") {
+      data = await await req.CollectionCrud.findByIdAndUpdate(req.params.id, {
+        $set: req.body,
+      }).populate("supplier");
+    } 
+    else if (req.collectionName === "user") {
+      req.body.pwd = bcrypt.hashSync(req.body.pwd, 10)
+      data = await req.CollectionCrud.findByIdAndUpdate(req.params.id, {
+        $set: req.body,
+      }).populate("branch");
+    } else {
+      data = await req.CollectionCrud.findByIdAndUpdate(req.params.id, {
+        $set: req.body,
+      });
+    }
     return res.send({
       item: data,
       message: `${req.CollectionCrud.modelName} updated`,
@@ -67,12 +93,15 @@ const getAllItems = async (req: any, res: any): Promise<any> => {
   try {
     let items: any;
     if (req.collectionName === "product") {
-      items = await req.CollectionCrud.find().populate("supplier");
+      items = await req.CollectionCrud.find({branch: req.branch}).populate("supplier");
     } 
     else if (req.collectionName === "user") {
-      items = await req.CollectionCrud.find().populate("branch");
+      items = await req.CollectionCrud.find({company: req.company}, '-pwd').populate("branch");
+    } 
+    else if (req.collectionName === "branch") {
+      items = await req.CollectionCrud.find({company: req.company});
     } else {
-      items = await req.CollectionCrud.find();
+      items = await req.CollectionCrud.find({branch: req.branch});
     }
     return res.send(items);
   } catch (error) {

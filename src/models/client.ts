@@ -1,6 +1,6 @@
 import { Schema } from 'mongoose'
 
-const getSchema = (): Schema => {
+const getSchema = (company: string): Schema => {
   const client = new Schema({
     name: {
       type: String,
@@ -21,6 +21,11 @@ const getSchema = (): Schema => {
     phone: {
       type: String,
       required: true
+    },
+    branch: {
+      type: Schema.Types.ObjectId,
+      ref: `branch_${company}`,
+      default: null
     }
   })
   return client

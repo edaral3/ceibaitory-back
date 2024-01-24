@@ -1,5 +1,5 @@
-import Joi from 'joi'
-import messages from './messageErrors/messagesErrors'
+import Joi from "joi";
+import messages from "./messageErrors/messagesErrors";
 
 const schema = Joi.object({
   name: Joi.string()
@@ -12,7 +12,8 @@ const schema = Joi.object({
     .allow(null)
     .max(50)
     .trim()
-    .messages(messages.validationStringMessages).label('Codigo de barras'),
+    .messages(messages.validationStringMessages)
+    .label("Codigo de barras"),
   priceCost: Joi.number()
     .positive()
     .required()
@@ -36,20 +37,20 @@ const schema = Joi.object({
     .messages(messages.validationStringMessages),
   expirationDate: Joi.date()
     .allow(null)
-    .preferences({ dateFormat: 'date' })
+    .preferences({ dateFormat: "date" })
     .messages(messages.validationDateMessages),
   description: Joi.string()
     .max(500)
     .trim()
-    .allow('')
+    .allow("")
     .messages(messages.validationStringMessages),
   ubication: Joi.string()
     .max(500)
     .trim()
-    .allow('')
+    .allow("")
     .messages(messages.validationStringMessages),
-  supplier: Joi.disallow(),
-  branch: Joi.disallow()
-})
+  supplier: Joi.string().max(500).allow(null).trim(),
+  branch: Joi.string().max(500).trim(),
+});
 
-export default schema
+export default schema;

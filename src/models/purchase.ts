@@ -28,6 +28,11 @@ const getSchema = (company: string): Schema => {
       ref: `supplier_${company}`,
       required: false
     },
+    branch: {
+      type: Schema.Types.ObjectId,
+      ref: `branch_${company}`,
+      default: null
+    },
     products: [trade]
   })
 

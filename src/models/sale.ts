@@ -3,7 +3,7 @@ import trade from './trade'
 
 
  
-const getSchema = (): Schema => {
+const getSchema = (company: string): Schema => {
   const Bill = new Schema({
     name: {
       type: String,
@@ -64,6 +64,11 @@ const getSchema = (): Schema => {
     canceled: {
       type: Boolean,
       default: false
+    },
+    branch: {
+      type: Schema.Types.ObjectId,
+      ref: `branch_${company}`,
+      default: null
     },
     products: [trade]
   })

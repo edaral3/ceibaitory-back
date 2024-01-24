@@ -10,6 +10,9 @@ const validationSelectMessages = {
   'any.only': 'El valor seleccionado no es valido "{#value}"'
 }
 
+const validationIntegerMessages = {
+  'number.positive': 'debe ser mayor a 0'
+}
 const validationDateMessages = {
   'date.base': 'Fecha seleccionada invalida',
   'date.strict': 'Fecha seleccionada invalida',
@@ -21,5 +24,6 @@ const validationDateMessages = {
 export default {
   validationStringMessages,
   validationSelectMessages,
-  validationDateMessages
+  validationDateMessages,
+  validationIntegerMessages
 }

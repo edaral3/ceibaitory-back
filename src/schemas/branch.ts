@@ -15,7 +15,7 @@ const schema = Joi.object({
   phone: Joi.string()
     .max(50)
     .trim()
-    .required()
+    .allow('')
     .messages(messages.validationStringMessages).label('Celular')
 })
 
