@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt'
+import CryptoJS from 'crypto-js';
 import config from '../config/config'
 
 const encriptData = (bodyName: string) => {
@@ -7,6 +8,9 @@ const encriptData = (bodyName: string) => {
       case "user":
         req.body.pwd = bcrypt.hashSync(req.body.pwd, 10)
         break;
+      case "company":
+        req.body.credentiasls =CryptoJS.AES.encrypt(req.body.credentiasls, config.secret).toString();
+          break;
       case "purchase":
         break;
       case "sale":

@@ -14,4 +14,6 @@ router.get('/:id', validateToken(['owner', 'admin', 'vendedor']), setCollection(
 
 router.get('/', validateToken(['owner', 'admin', 'vendedor']), setCollection('sale'), sale.getAll)
 
+router.get('/bill/:uuid', validateToken(['owner', 'admin']), setCollection('sale'), sale.getBill)
+
 export default router

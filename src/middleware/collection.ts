@@ -2,9 +2,15 @@ import { getCollection } from "../models";
 
 const setCollection = (collectionName: string) => {
   return (req: any, _res: any, next: any) => {
+    if (collectionName === "company"){
+      req.CollectionCompany = getCollection("company", "");
+      next();
+      return;
+    }
     //const companyName = req.companyName;
     const companyName = req.companyName;
     req.collectionName = collectionName;
+    
     if (collectionName !== "report")
       req.CollectionCrud = getCollection(collectionName, companyName);
     switch (collectionName) {

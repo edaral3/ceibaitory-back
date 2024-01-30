@@ -1,5 +1,4 @@
 import Mongoose, { type ClientSession } from "mongoose";
-import { existValueError } from "../common/CRUD/errors";
 import {
   createItem,
   deleteItem,
@@ -13,15 +12,20 @@ import { getClientDetails } from "./bill";
 
 const getBillInformation = async (req: any, res: any): Promise<void> => {
   try {
-    res.send({ name: "EDGAR ARNOLDO", direction: "granua aldana" });
-    /*const billingInformation = await getClientDetails(
-      req.collections,
+    //res.send({ name: "EDGAR ARNOLDO", direction: "granua aldana" });
+    const billingInformation = await getClientDetails(
+      req.CollectionCompany,
       req.companyName,
       req.params.nit
     )
-    res.send(billingInformation)*/
+    res.send(billingInformation)
   } catch (error: any) {
-    res.status(500).json({ message: error.message });
+    if(error.message === 'El nit no existe'){
+      res.status(400).json({ message: error.message });
+    }
+    else {
+      res.status(500).json({ message: error.message });
+    }
   }
 };
 
@@ -102,17 +106,40 @@ const createOwnerUser = async (req: any, res: any): Promise<void> => {
       await session.abortTransaction();
     } catch (error) {}
     if (error.code === 11000) {
-      res
-        .status(400)
-        .json({
-          type: "error",
-          message: `Ya existe el/la ${status}, ingresa otro nombre`,
-        });
+      res.status(400).json({
+        type: "error",
+        message: `Ya existe el/la ${status}, ingresa otro nombre`,
+      });
     } else {
       res.status(500).json({ message: `Error creating company` });
     }
   } finally {
     await session.endSession();
+  }
+};
+
+const addFelInformation = async (req: any, res: any): Promise<void> => {
+  try {
+    const { name, credentiasls, id } = req.body;
+
+    await req.CollectionCompany.findByIdAndUpdate(id, {
+      billingCompanyName: name,
+      billingCompanyCredentials: credentiasls,
+    });
+
+    res.send({ message: "Informacion de facturacion agregada" });
+  } catch (error: any) {
+    res.status(500).json({ message: `Error creating company` });
+  }
+};
+
+const isCompanyBilling = async (req: any, res: any): Promise<void> => {
+  try {
+    const company = await req.CollectionCompany.findOne({name: req.companyName})
+    const isBilling = company.billingCompanyCredentials ? true: false;
+    res.send({ isBilling: isBilling });
+  } catch (error: any) {
+    res.status(500).json({ message: `Error creating company` });
   }
 };
 
@@ -124,4 +151,6 @@ export default {
   getAll: getAllItems,
   getBillInformation,
   createOwnerUser,
+  addFelInformation,
+  isCompanyBilling,
 };

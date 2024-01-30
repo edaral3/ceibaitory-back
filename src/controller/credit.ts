@@ -1,5 +1,7 @@
-import Mongoose, { type ClientSession } from 'mongoose'
+import Mongoose, { type ClientSession } from "mongoose";
 import { generateBill, cancelBill, getPDF } from "./bill";
+
+import { getClientDetails } from "./bill";
 
 const updateProduct = async (
   ControllerProduct: any,
@@ -25,82 +27,128 @@ const updateProduct = async (
 };
 
 const createCredit = async (req: any, res: any): Promise<void> => {
-  const session = await Mongoose.startSession()
-  session.startTransaction()
+  const session = await Mongoose.startSession();
+  session.startTransaction();
   try {
-    const credit = new req.CollectionCredit(req.body)
-    await updateProduct(req.CollectionProduct, req.body.products, session)
-    await credit.save({ session })
-    await session.commitTransaction()
-    res.send('OK')
+    const products = req.body.products;
+    await updateProduct(req.CollectionProduct, products, session);
+    const client = await req.CollectionClient.findById(req.body.client);
+    const company = await req.CollectionCompany.findOne({
+      name: req.companyName,
+    });
+    let newBill: any = null;
+    if (company.billingCompanyCredentials) {
+      if (client.nit) {
+        const billingInformation = await getClientDetails(
+          req.CollectionCompany,
+          req.companyName,
+          client.nit
+        );
+        req.body.clientNit = client.nit
+        req.body.direction = billingInformation.direction
+        req.body.clientName = billingInformation.name
+      } else {
+        req.body.clientNit = 'CF'
+        req.body.direction = 'ciudad'
+        req.body.clientName = 'Consumidor final'
+      } 
+      const bill = await generateBill(
+        req.CollectionCompany,
+        req.companyName,
+        req.body
+      );
+      
+      newBill = {
+        name: req.body.clientName,
+        nit: req.body.clientNit,
+        direction: req.body.direction,
+        uuid: bill.uuid,
+        uuidEmision: bill.uuidEmision,
+      };
+    }
+    const newCredit: any = {
+      bill: newBill,
+      total: req.body.total,
+      date: req.body.date,
+      products: products,
+      client: req.body.client,
+      branch: req.body.branch,
+    };
+    const credit = new req.CollectionCredit(newCredit);
+    await credit.save({ session });
+    await session.commitTransaction();
+    res.send("OK");
   } catch (error) {
-    await session.abortTransaction()
-    res.status(500).json({ message: 'Error creating credit' })
+    await session.abortTransaction();
+    res.status(500).json({ message: "Error creating credit" });
   } finally {
-    await session.endSession()
+    await session.endSession();
   }
-}
+};
 
 const getTotalUntilDate = (amount: number, payments: any): number => {
-  let paid = amount
+  let paid = amount;
   for (const pay of payments) {
-    paid += Number(pay.amount)
+    paid += Number(pay.amount);
   }
-  return paid
-}
+  return paid;
+};
 
 const payCredit = async (req: any, res: any): Promise<void> => {
-  const session = await Mongoose.startSession()
-  session.startTransaction()
+  const session = await Mongoose.startSession();
+  session.startTransaction();
   try {
-    const credit = await req.CollectionCredit.findById(req.params.id)
-    const paid = getTotalUntilDate(Number(req.body.amount), credit.payments)
+    const credit = await req.CollectionCredit.findById(req.params.id);
+    const paid = getTotalUntilDate(Number(req.body.amount), credit.payments);
     const data = await req.CollectionCredit.findByIdAndUpdate(
       req.params.id,
       {
         $push: { payments: req.body },
-        $set: { state: paid >= credit.total ? 2 : 1, paid: paid }
+        $set: { state: paid >= credit.total ? 2 : 1, paid: paid },
       },
       { session }
-    )
-    res.send(data)
-    await session.commitTransaction()
+    );
+    res.send(data);
+    await session.commitTransaction();
   } catch (error) {
-    await session.abortTransaction()
-    res.status(500).json({ message: 'Error paying credit' })
+    await session.abortTransaction();
+    res.status(500).json({ message: "Error paying credit" });
   } finally {
-    await session.endSession()
+    await session.endSession();
   }
-}
+};
 
 const getOneCredit = async (req: any, res: any): Promise<void> => {
   try {
-    const data = await req.CollectionCredit
-      .findById(req.params.id)
-      .populate('client')
-    res.send(data)
+    const data = await req.CollectionCredit.findById(req.params.id).populate(
+      "client"
+    );
+    res.send(data);
   } catch (error) {
-    res.status(500).json({ message: 'Error getting one credit' })
+    res.status(500).json({ message: "Error getting one credit" });
   }
-}
+};
 
 const cancelCredit = async (req: any, res: any): Promise<void> => {
   const session = await Mongoose.startSession();
   session.startTransaction();
   try {
+    const cancelDate = new Date();
+    cancelDate.setHours(cancelDate.getHours() - 6);
     const data = await req.CollectionCredit.findByIdAndUpdate(
       req.params.id,
       {
         $set: {
           canceled: true,
-          cancellationDate: new Date(),
+          cancellationDate: cancelDate,
         },
       },
       { session }
     );
     await updateProduct(req.CollectionProduct, data.products, session, 1);
-    if(data.bill){
-      await cancelBill(req.collections, req.companyName, req.body.products);
+    if (data.bill) {
+      data.bill.createDate = data.date;
+      await cancelBill(req.CollectionCompany, req.companyName, data.bill);
     }
     await session.commitTransaction();
     res.send("OK");
@@ -110,27 +158,29 @@ const cancelCredit = async (req: any, res: any): Promise<void> => {
   } finally {
     await session.endSession();
   }
-}
+};
 
 const unpaidCredit = async (req: any, res: any): Promise<void> => {
   try {
     const data = await req.CollectionCredit.findByIdAndUpdate(req.query.id, {
-      $set: 4
-    })
-    res.send(data)
+      $set: 4,
+    });
+    res.send(data);
   } catch (error) {
-    res.status(500).json({ message: 'Error unpaying credit' })
+    res.status(500).json({ message: "Error unpaying credit" });
   }
-}
+};
 
 const getAllCredits = async (req: any, res: any): Promise<any> => {
   try {
-    const items = await req.CollectionCredit.find().populate(`client`).sort({date:-1})
-    res.send(items)
+    const items = await req.CollectionCredit.find()
+      .populate(`client`)
+      .sort({ date: -1 });
+    res.send(items);
   } catch (error) {
-    res.status(500).json({ message: 'Error gettin all purchases' })
+    res.status(500).json({ message: "Error gettin all purchases" });
   }
-}
+};
 
 export default {
   create: createCredit,
@@ -138,5 +188,5 @@ export default {
   getOne: getOneCredit,
   getAll: getAllCredits,
   unpaid: unpaidCredit,
-  pay: payCredit
-}
+  pay: payCredit,
+};

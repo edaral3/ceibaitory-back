@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<AnulaDocumentoXMLRequest id="$UUID">
- <xml_dte> 
- <![CDATA[
-    $DATA
- ]]>
-</xml_dte>
-</AnulaDocumentoXMLRequest>

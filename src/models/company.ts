@@ -19,11 +19,11 @@ const getSchema = (): Schema => {
       required: false
     },
     billingCompanyCredentials: {
-      type: Object,
+      type: String,
       require: false
     }
   })
   return company
 }
-
+ 
 export default getSchema

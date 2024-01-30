@@ -29,18 +29,19 @@ const createSale = async (req: any, res: any): Promise<void> => {
   session.startTransaction();
   try {
     const products = req.body.products;
-    const collections = {
-      collectionBillingToken: req.collectionBillingToken,
-      CollectionCompany: req.CollectionCompany,
-    };
     await updateProduct(req.CollectionProduct, products, session);
     let newBill: any = null;
 
     if (req.body.clientNit) {
+      if(req.body.clientNit.toLowerCase() === 'cf'){
+        req.body.clientNit = 'CF'
+        req.body.direction = 'ciudad'
+        req.body.clientName = 'Consumidor final'
+      }
       const bill = await generateBill(
-        collections,
+        req.CollectionCompany,
         req.companyName,
-        req.body.products
+        req.body
       );
       newBill = {
         name: req.body.clientName,
@@ -100,19 +101,22 @@ const cancelSale = async (req: any, res: any): Promise<void> => {
   const session = await Mongoose.startSession();
   session.startTransaction();
   try {
+    const cancelDate = new Date()
+    cancelDate.setHours(cancelDate.getHours()-6)
     const data = await req.CollectionSale.findByIdAndUpdate(
       req.params.id,
       {
         $set: {
           canceled: true,
-          cancellationDate: new Date(),
+          cancellationDate: cancelDate,
         },
       },
       { session }
     );
     await updateProduct(req.CollectionProduct, data.products, session, 1);
     if(data.bill){
-      await cancelBill(req.collections, req.companyName, req.body.products);
+      data.bill.createDate = data.date;
+      await cancelBill(req.CollectionCompany, req.companyName, data.bill);
     }
     await session.commitTransaction();
     res.send("OK");
@@ -126,7 +130,7 @@ const cancelSale = async (req: any, res: any): Promise<void> => {
 
 const getPdfBill = async (req: any, res: any): Promise<void> => {
   try {
-    const pdf = await getPDF(req.collections, req.companyName, req.params.uuid);
+    const pdf = await getPDF(req.CollectionCompany, req.companyName, req.params.uuid);
 
     res.send({ pdf });
   } catch (error) {

@@ -1,134 +1,146 @@
-import certifiers from '../utils/certifiers'
-import { redisConnection } from '../redisdb/redisConnection'
+import certifiers from "../utils/certifiers";
+import CryptoJS from "crypto-js";
+import config from "../config/config";
+import { redisConnection } from "../redisdb/redisConnection";
 import {
   getClientInformationMP,
   generateBillMP,
   cancelBillMP,
   getPDFMP,
-  generateTokenMP
-} from './megaprint'
-
-const redisClient = redisConnection()
+  generateTokenMP,
+} from "./megaprint";
 
 const deleteToken = async (companyName: string): Promise<void> => {
-  await redisClient.del(`${companyName}_token`)
-}
+  const redisClient = await redisConnection();
+  await redisClient.del(`${companyName}_token`);
+};
 
 const getToken = async (companyName: string, company: any): Promise<string> => {
-  const exist = await redisClient.exists(`${companyName}_token`)
+  const redisClient = await redisConnection();
+  const exist = await redisClient.exists(`${companyName}_token`);
   if (!exist) {
-    await setToken(companyName, company)
+    await setToken(companyName, company);
   }
-  const token = await redisClient.get(`${companyName}_token`)
-  return token
-}
+  const token = await redisClient.get(`${companyName}_token`);
+  return token;
+};
 
 const setToken = async (companyName: string, company: any): Promise<void> => {
-  let token: any
+  const redisClient = await redisConnection();
+  let token: any;
+  var bytes = CryptoJS.AES.decrypt(
+    company.billingCompanyCredentials,
+    config.secret
+  );
+  var decript = bytes.toString(CryptoJS.enc.Utf8);
+  company.billingCompanyCredentials = decript;
   switch (company.billingCompanyName) {
     case certifiers.MEGAPRINT:
-      token = generateTokenMP(token)
+      token = await generateTokenMP(company);
   }
-  await redisClient.set(`${companyName}_token`, token)
-}
+  await redisClient.set(`${companyName}_token`, token);
+};
 
 const generateBill = async (
-  collections: any,
+  CollectionCompany: any,
   companyName: string,
   body: any
 ): Promise<any> => {
-  const company = await collections.CollectionCompany.finOne({
-    name: companyName
-  })
+  const company = await CollectionCompany.findOne({
+    name: companyName,
+  });
 
-  const token = await getToken(companyName, company)
+  const token = await getToken(companyName, company);
 
-  let billData: any
+  let billData: any;
 
   switch (company.billingCompanyName) {
     case certifiers.MEGAPRINT:
-      billData = generateBillMP(token, body)
+      billData = await generateBillMP(token, body);
   }
 
-  if (billData === 'invalid Token') {
-    await deleteToken(companyName)
-    throw new Error('Invalid token')
+  if (billData === "invalid Token") {
+    await deleteToken(companyName);
+    throw new Error("Invalid token");
   }
-  return billData
-}
+  return billData;
+};
 
 const cancelBill = async (
-  collections: any,
+  CollectionCompany: any,
   companyName: string,
   body: any
 ): Promise<void> => {
-  const company = await collections.CollectionCompany.finOne({
-    name: companyName
-  })
-  const token = await getToken(companyName, company)
+  const company = await CollectionCompany.findOne({
+    name: companyName,
+  });
+  const token = await getToken(companyName, company);
 
-  let billData: any
+  let billData: any;
 
   switch (company.billingCompanyName) {
     case certifiers.MEGAPRINT:
-      billData = cancelBillMP(token, body)
+      billData = await cancelBillMP(token, body);
   }
 
-  if (billData === 'invalid Token') {
-    await deleteToken(companyName)
-    throw new Error('Invalid token')
+  if (billData === "invalid Token") {
+    await deleteToken(companyName);
+    throw new Error("Invalid token");
   }
-  return billData
-}
+  return billData;
+};
 
 const getClientDetails = async (
-  collections: any,
+  CollectionCompany: any,
   companyName: string,
   nit: string
 ): Promise<any> => {
-  const company = await collections.CollectionCompany.finOne({
-    name: companyName
-  })
+  const company = await CollectionCompany.findOne({
+    name: companyName,
+  });
 
-  const token = await getToken(companyName, company)
+  const token = await getToken(companyName, company);
 
-  let billData: any
+  let billData: any;
 
   switch (company.billingCompanyName) {
     case certifiers.MEGAPRINT:
-      billData = getClientInformationMP(token, nit)
+      billData = await getClientInformationMP(token, nit);
   }
 
-  if (billData === 'invalid Token') {
-    await deleteToken(companyName)
-    throw new Error('Invalid token')
+  if (billData === "El nit no existe") {
+    throw new Error(billData);
   }
-  return billData
-}
+  if (billData === "invalid Token") {
+    await deleteToken(companyName);
+    throw new Error("Invalid token");
+  }
+  return billData;
+};
 
 const getPDF = async (
-  collections: any,
+  CollectionCompany: any,
   companyName: any,
   uuid: string
 ): Promise<any> => {
-  const company = await collections.CollectionCompany.finOne({
-    name: companyName
-  })
+  const company = await CollectionCompany.findOne({
+    name: companyName,
+  });
 
-  const token = await getToken(companyName, company)
+  const token = await getToken(companyName, company);
 
-  let billData: any
+  let billData: any;
 
   switch (company.billingCompanyName) {
     case certifiers.MEGAPRINT:
-      billData = getPDFMP(token, uuid)
+      billData = await getPDFMP(token, uuid);
   }
 
-  if (billData === 'invalid Token') {
-    await deleteToken(companyName)
-    throw new Error('Invalid token')
+  if (billData === "invalid Token") {
+    await deleteToken(companyName);
+    throw new Error("Invalid token");
   }
-  return billData
-}
+  return billData;
+};
 
-export { generateBill, getClientDetails, getPDF, cancelBill }
+export { generateBill, getClientDetails, getPDF, cancelBill };

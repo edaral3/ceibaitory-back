@@ -40,7 +40,7 @@ app.use(express.json())
 mongoConnection()
 
 // Redis
-redisConnection()
+//redisConnection()
 
 // Endpoints
 app.use('/', root)

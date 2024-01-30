@@ -11,11 +11,15 @@ router.post('/', validateToken(['owner']), validator('user'), encriptData('user'
 
 router.post('/userOwner', encriptData('user'), setCollection('user'), user.createOwnerUser)
 
+router.put('/addFelInformation', encriptData('company'), setCollection('company'), user.addFelInformation)
+
 router.put('/:id', validateToken(['owner']), validator('user'), setCollection('user'), user.update)
 
 router.delete('/:id', validateToken(['owner']), setCollection('user'), user.delete)
 
-router.get('/billInformation', validateToken(['owner']), setCollection('user'), user.getBillInformation)
+router.get('/billInformation/:nit', validateToken(['owner']), setCollection('user'), user.getBillInformation)
+
+router.get('/isBilling', validateToken(['owner','admin','vendedor']), setCollection('user'), user.isCompanyBilling)
 
 router.get('/:id', validateToken(['owner']), setCollection('user'), user.getOne)
 

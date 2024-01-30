@@ -3,7 +3,7 @@ import config from '../config/config'
 
 const redisConfig = config.db.redis
 let redisClient: any
-const redisConnection = (): any => {
+const redisConnection = async () => {
   if (redisClient) return redisClient
 
   redisClient = createClient({
@@ -13,7 +13,7 @@ const redisConnection = (): any => {
       port: Number(redisConfig.port)
     }
   })
-  return redisClient
+  return await redisClient.connect()
 }
 
 export { redisConnection }
