@@ -1,14 +1,14 @@
-import Mongoose from "mongoose";
+import Mongoose from 'mongoose'
 
-import client from "./client";
-import user from "./user";
-import product from "./product";
-import supplier from "./supplier";
-import credit from "./credit";
-import sale from "./sale";
-import purchase from "./purchase";
-import company from "./company";
-import branch from "./branch";
+import client from './client'
+import user from './user'
+import product from './product'
+import supplier from './supplier'
+import credit from './credit'
+import sale from './sale'
+import purchase from './purchase'
+import company from './company'
+import branch from './branch'
 
 const models = {
   client,
@@ -19,19 +19,19 @@ const models = {
   sale,
   purchase,
   company,
-  branch,
-};
+  branch
+}
 
 const getCollection = (collectionName: string, companyName: string): any => {
   const schemaName = `${collectionName}_${
-    collectionName !== "user" ? companyName : ""
-  }`;
+    collectionName !== 'user' ? companyName : ''
+  }`
 
   try {
-    return Mongoose.model(schemaName);
+    return Mongoose.model(schemaName)
   } catch (error) {
-    return Mongoose.model(schemaName, models[collectionName](companyName));
+    return Mongoose.model(schemaName, models[collectionName](companyName))
   }
-};
+}
 
-export { getCollection };
+export { getCollection }

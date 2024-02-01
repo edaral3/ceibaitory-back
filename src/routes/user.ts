@@ -19,12 +19,10 @@ router.delete('/:id', validateToken(['owner']), setCollection('user'), user.dele
 
 router.get('/billInformation/:nit', validateToken(['owner']), setCollection('user'), user.getBillInformation)
 
-router.get('/isBilling', validateToken(['owner','admin','vendedor']), setCollection('user'), user.isCompanyBilling)
+router.get('/isBilling', validateToken(['owner', 'admin', 'vendedor']), setCollection('user'), user.isCompanyBilling)
 
 router.get('/:id', validateToken(['owner']), setCollection('user'), user.getOne)
 
 router.get('/', validateToken(['owner']), setCollection('user'), user.getAll)
 
-
 export default router
-

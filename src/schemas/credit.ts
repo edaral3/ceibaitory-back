@@ -15,6 +15,6 @@ const schema = Joi.object({
   date: Joi.allow(),
   client: Joi.string().min(1).messages(messages.validationStringMessages).label('Cliente'),
   products: Joi.array().items(trade),
-  branch: Joi.string().max(500).trim(),
+  branch: Joi.string().max(500).trim()
 })
 export default schema

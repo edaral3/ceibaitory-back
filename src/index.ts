@@ -1,5 +1,4 @@
 import { mongoConnection } from './mongodb/mongoConnection'
-import { redisConnection } from './redisdb/redisConnection'
 import http from 'http'
 import express from 'express'
 import cors from 'cors'
@@ -26,7 +25,7 @@ const getCors = (): any => {
     ],
     methods: ['GET', 'POST', 'DELETE', 'UPDATE', 'PUT'],
     headers: ['*']
-    //headers: ['authorization', 'Content-Type']
+    // headers: ['authorization', 'Content-Type']
   }
 
   return restrictedCors
@@ -39,8 +38,7 @@ app.use(express.json())
 // Mongodb
 mongoConnection()
 
-// Redis
-//redisConnection()
+// redisConnection()
 
 // Endpoints
 app.use('/', root)

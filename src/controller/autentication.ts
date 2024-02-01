@@ -1,35 +1,35 @@
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import config from '../config/config'
-import { getCollection } from "../models";
+import { getCollection } from '../models'
 
 const login = async (req: any, res: any): Promise<any> => {
   try {
     const msj = 'Usuario o contraseña incorrecto'
-    let user = await req.CollectionCrud.findOne({ user: req.body.user }).populate("company");
-    req.CollectionBranch = getCollection("branch", user.company.schemaName)
+    const user = await req.CollectionCrud.findOne({ user: req.body.user }).populate('company')
+    req.CollectionBranch = getCollection('branch', user.company.schemaName)
 
     if (!user) {
       return res.status(401).json({ message: msj })
     }
     if (bcrypt.compareSync(req.body.pwd, user.pwd)) {
-      let branches: any = [];
+      const branches: any = []
       if (user.type === 'owner') {
         const branchesAux = await req.CollectionBranch.find()
         for (const branch of branchesAux) {
-          branches.push({ name: branch.name, _id: branch._id });
+          branches.push({ name: branch.name, _id: branch._id })
         }
       } else {
         for (const branch of user.branch) {
           const item = await req.CollectionBranch.findById(branch)
-          branches.push({ name: item.name, _id: item._id });
+          branches.push({ name: item.name, _id: item._id })
         }
       }
       const newToken = {
         id: user._id,
         user: user.user,
         company: { name: user.company.name, _id: user.company._id },
-        branches: branches,
+        branches,
         roles: user.type
       }
       const jwToken = jwt.sign(JSON.stringify(newToken), config.secret)

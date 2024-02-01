@@ -10,6 +10,6 @@ const schema = Joi.object({
   date: Joi.allow(),
   direction: Joi.allow(),
   products: Joi.array().items(trade),
-  branch: Joi.string().max(500).trim(),
+  branch: Joi.string().max(500).trim()
 })
 export default schema

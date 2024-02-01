@@ -57,33 +57,33 @@ const getOnePurchase = async (req: any, res: any): Promise<void> => {
 }
 
 const cancelPurchase = async (req: any, res: any): Promise<void> => {
-  const session = await Mongoose.startSession();
-  session.startTransaction();
+  const session = await Mongoose.startSession()
+  session.startTransaction()
   try {
     const data = await req.CollectionPurchase.findByIdAndUpdate(
       req.params.id,
       {
         $set: {
           canceled: true,
-          cancellationDate: new Date(),
-        },
+          cancellationDate: new Date()
+        }
       },
       { session }
-    );
-    await updateProduct(req.CollectionProduct, data.products, session, 1);
-    await session.commitTransaction();
-    res.send("OK");
+    )
+    await updateProduct(req.CollectionProduct, data.products, session, 1)
+    await session.commitTransaction()
+    res.send('OK')
   } catch (error) {
-    await session.abortTransaction();
-    res.status(500).json({ message: "Error cancelling sale" });
+    await session.abortTransaction()
+    res.status(500).json({ message: 'Error cancelling sale' })
   } finally {
-    await session.endSession();
+    await session.endSession()
   }
 }
 
 const getAllPurchases = async (req: any, res: any): Promise<any> => {
   try {
-    const items = await req.CollectionPurchase.find().sort({date:-1})
+    const items = await req.CollectionPurchase.find().sort({ date: -1 })
     return res.send(items)
   } catch (error) {
     return res.status(500).json({ message: 'Error gettin all purchases' })

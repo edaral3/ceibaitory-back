@@ -1,27 +1,27 @@
 import bcrypt from 'bcrypt'
-import CryptoJS from 'crypto-js';
+import CryptoJS from 'crypto-js'
 import config from '../config/config'
 
 const encriptData = (bodyName: string) => {
   return (req: any, _res: any, next: any) => {
     switch (bodyName) {
-      case "user":
+      case 'user':
         req.body.pwd = bcrypt.hashSync(req.body.pwd, 10)
-        break;
-      case "company":
-        req.body.credentiasls =CryptoJS.AES.encrypt(req.body.credentiasls, config.secret).toString();
-          break;
-      case "purchase":
-        break;
-      case "sale":
-        break;
-      case "credit":
-        break;
-      case "report":
-        break;
+        break
+      case 'company':
+        req.body.credentiasls = CryptoJS.AES.encrypt(req.body.credentiasls, config.secret).toString()
+        break
+      case 'purchase':
+        break
+      case 'sale':
+        break
+      case 'credit':
+        break
+      case 'report':
+        break
     }
-    next();
-  };
-};
+    next()
+  }
+}
 
-export { encriptData };
+export { encriptData }
