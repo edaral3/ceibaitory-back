@@ -1,5 +1,4 @@
 import { mongoConnection } from './mongodb/mongoConnection'
-import { redisConnection } from './redisdb/redisConnection'
 import http from 'http'
 import express from 'express'
 import cors from 'cors'
@@ -38,9 +37,6 @@ app.use(express.json())
 
 // Mongodb
 mongoConnection()
-
-// Redis
-// redisConnection()
 
 // Endpoints
 app.use('/', root)

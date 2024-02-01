@@ -16,15 +16,6 @@ interface product {
   amount: number
 }
 
-interface body {
-  products: product[]
-  date: Date
-  name: string
-  nit: string
-  direction: string
-  total: number
-}
-
 const buildProductList = (products: product[]): any => {
   const itemTemplate = item
   let items = ''
