@@ -8,20 +8,27 @@ const login = async (req: any, res: any): Promise<any> => {
     const msj = 'Usuario o contraseña incorrecto'
     let user = await req.CollectionCrud.findOne({ user: req.body.user }).populate("company");
     req.CollectionBranch = getCollection("branch", user.company.schemaName)
-    
+
     if (!user) {
       return res.status(401).json({ message: msj })
     }
     if (bcrypt.compareSync(req.body.pwd, user.pwd)) {
-      const branches: any = [];
-      for(const branch of user.branch){
-        const item = await req.CollectionBranch.findById(branch)
-        branches.push({name: item.name, _id: item._id});
+      let branches: any = [];
+      if (user.type === 'owner') {
+        const branchesAux = await req.CollectionBranch.find()
+        for (const branch of branchesAux) {
+          branches.push({ name: branch.name, _id: branch._id });
+        }
+      } else {
+        for (const branch of user.branch) {
+          const item = await req.CollectionBranch.findById(branch)
+          branches.push({ name: item.name, _id: item._id });
+        }
       }
       const newToken = {
         id: user._id,
         user: user.user,
-        company: {name: user.company.name, _id: user.company._id},
+        company: { name: user.company.name, _id: user.company._id },
         branches: branches,
         roles: user.type
       }

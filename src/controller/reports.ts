@@ -633,6 +633,33 @@ const montlyReports = async (req: any, res: any): Promise<void> => {
   }
 };
 
+const productsOutOfStockOfExpired = async (
+  req: any,
+  res: any
+): Promise<void> => {
+  try {
+    //let products = await req.CollectionProduct.find({branch: req.branch});
+    let products = await req.CollectionProduct.find();
+
+    const productsOutOfStock = products.filter(
+      (item: any) => item.existence - item.minExistence <= 0
+    );
+
+    const now = new Date()
+    now.setHours(now.getHours() - 6)
+    now.setMonth(now.getMonth + 1)
+
+    const productsExpired = products.filter(
+      (item: any) => item.expirationDate > now
+    );
+    return res.send({
+      productsOutOfStock: productsOutOfStock.length,
+      productsExpired: productsExpired.length,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Error creando el reporte" });
+  }
+};
 export default {
   getDayReports,
   getInventoryExcel,
@@ -641,4 +668,5 @@ export default {
   getExpiringProducts,
   getTop10ABC,
   montlyReports,
+  productsOutOfStockOfExpired
 };
