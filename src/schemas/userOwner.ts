@@ -1,5 +1,5 @@
-import Joi from "joi";
-import messages from "./messageErrors/messagesErrors";
+import Joi from 'joi'
+import messages from './messageErrors/messagesErrors'
 
 const schema = Joi.object({
   user: Joi.string()
@@ -23,34 +23,34 @@ const schema = Joi.object({
   pwd: Joi.string().required().messages(messages.validationStringMessages),
   phone: Joi.string()
     .optional()
-    .allow("")
+    .allow('')
     .max(50)
     .min(1)
     .trim()
     .messages(messages.validationStringMessages),
   phoneCompany: Joi.string()
     .optional()
-    .allow("")
+    .allow('')
     .max(50)
     .min(1)
     .trim()
     .messages(messages.validationStringMessages),
   direction: Joi.allow(null),
   company: Joi.allow(null),
-  branch: Joi.allow(null),
-  /*company: Joi.string()
+  branch: Joi.allow(null)
+  /* company: Joi.string()
     .optional()
     .allow(null)
     .max(50)
     .min(1)
     .trim()
     //.required()
-    .messages(messages.validationStringMessages),*/
-  /*branch: Joi.string()
+    .messages(messages.validationStringMessages), */
+  /* branch: Joi.string()
     .max(50)
     .min(1)
     .trim()
     .required()
-    .messages(messages.validationStringMessages)/*/
-});
-export default schema;
+    .messages(messages.validationStringMessages)/ */
+})
+export default schema

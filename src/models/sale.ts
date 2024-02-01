@@ -1,8 +1,6 @@
 import { Schema } from 'mongoose'
 import trade from './trade'
 
-
- 
 const getSchema = (company: string): Schema => {
   const Bill = new Schema({
     name: {
@@ -12,12 +10,12 @@ const getSchema = (company: string): Schema => {
     nit: {
       type: String,
       required: false
-    },  
+    },
     direction: {
       type: String,
       required: false,
       default: null
-    },  
+    },
     uuid: {
       type: String,
       default: '',
@@ -32,7 +30,7 @@ const getSchema = (company: string): Schema => {
       type: String,
       required: false,
       default: null
-    },
+    }
   })
 
   const sale = new Schema({
@@ -60,7 +58,7 @@ const getSchema = (company: string): Schema => {
     cancellationDate: {
       type: Date,
       default: null
-    },      
+    },
     canceled: {
       type: Boolean,
       default: false

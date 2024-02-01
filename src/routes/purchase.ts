@@ -8,9 +8,9 @@ const router = express.Router()
 
 router.post('/', validateToken(['owner', 'admin']), validator('purchase'), setCollection('purchase'), purchase.create)
 
-router.delete('/:id', validateToken(['owner', 'admin']),setCollection('purchase'), purchase.cancel)
+router.delete('/:id', validateToken(['owner', 'admin']), setCollection('purchase'), purchase.cancel)
 
-router.get('/:id', validateToken(['owner', 'admin']),setCollection('purchase'), purchase.getOne)
+router.get('/:id', validateToken(['owner', 'admin']), setCollection('purchase'), purchase.getOne)
 
 router.get('/', validateToken(['owner', 'admin']), setCollection('purchase'), purchase.getAll)
 

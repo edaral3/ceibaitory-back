@@ -6,8 +6,8 @@ const schema = Joi.object({
     .required()
     .messages(messages.validationStringMessages),
   pwd: Joi.string()
-  .required()
-  .messages(messages.validationStringMessages),
+    .required()
+    .messages(messages.validationStringMessages)
 })
 
 export default schema

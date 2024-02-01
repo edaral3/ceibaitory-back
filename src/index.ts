@@ -26,7 +26,7 @@ const getCors = (): any => {
     ],
     methods: ['GET', 'POST', 'DELETE', 'UPDATE', 'PUT'],
     headers: ['*']
-    //headers: ['authorization', 'Content-Type']
+    // headers: ['authorization', 'Content-Type']
   }
 
   return restrictedCors
@@ -40,7 +40,7 @@ app.use(express.json())
 mongoConnection()
 
 // Redis
-//redisConnection()
+// redisConnection()
 
 // Endpoints
 app.use('/', root)
