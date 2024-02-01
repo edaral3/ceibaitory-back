@@ -24,7 +24,7 @@ const getSchema = (company: string): Schema => {
     },
     company: {
       type: Schema.Types.ObjectId,
-      ref: `company_`,
+      ref: 'company_',
       required: false
     },
     branch: [

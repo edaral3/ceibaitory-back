@@ -25,5 +25,5 @@ const getSchema = (): Schema => {
   })
   return company
 }
- 
+
 export default getSchema

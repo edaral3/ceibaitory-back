@@ -1,14 +1,14 @@
 const existValueError = (value: string): string => {
-  let message = "";
+  let message = ''
   switch (value) {
-    case "barcode":
-      message = "El codigo de barras ya existe, ingrese otro codigo de barras";
-      break;
-    case "name":
-      message = "El nombre ya existe, ingrese otro nombre";
-      break;
+    case 'barcode':
+      message = 'El codigo de barras ya existe, ingrese otro codigo de barras'
+      break
+    case 'name':
+      message = 'El nombre ya existe, ingrese otro nombre'
+      break
   }
-  return message;
-};
+  return message
+}
 
-export { existValueError };
+export { existValueError }

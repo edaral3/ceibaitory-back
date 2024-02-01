@@ -20,7 +20,7 @@ const getSchema = (): Schema => {
     },
     company: {
       type: Schema.Types.ObjectId,
-      ref: `company_`,
+      ref: 'company_',
       required: false
     },
     description: {

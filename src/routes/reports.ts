@@ -18,4 +18,6 @@ router.get('/expiringProducts', validateToken(['owner']), setCollection('report'
 
 router.get('/top10ABC', validateToken(['owner']), setCollection('report'), reports.getTop10ABC)
 
+router.get('/productsOutOfStockOfExpired', validateToken(['owner']), setCollection('report'), reports.productsOutOfStockOfExpired)
+
 export default router
