@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "start": "ts-node-esm ./src/index.ts",
+    "build": "nodemon ./src/index.ts",
     "dev": "nodemon ./src/index.ts",
     "lint": "eslint --ext .ts .",
     "lint:fix": "eslint --fix --ext .ts ."
