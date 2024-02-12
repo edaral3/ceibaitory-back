@@ -1,10 +1,11 @@
 {
-  "name": "agropecuaria-aldana",
+  "name": "ceibai",
   "version": "3.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
-    "start": "ts-node-esm ./src/index.ts",
-    "build": "nodemon ./src/index.ts",
+    "start": "ts-node-esm ./src/index.js",
+    "build": "tsc -p .",
     "dev": "nodemon ./src/index.ts",
     "lint": "eslint --ext .ts .",
     "lint:fix": "eslint --fix --ext .ts ."
