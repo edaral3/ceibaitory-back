@@ -18,7 +18,7 @@ const validateToken = (roles: string[]) => {
       }
       const userCollection = getCollection('user', decoded.company.name)
       const user = await userCollection.findById(decoded.id)
-      if (user.type !== 'owner' && !user.branch.find((item: any) => item == req.headers.branch)) {
+      if (user.type !== 'owner' && !user.branch.find((item: any) => item === req.headers.branch)) {
         return res.status(401).json({
           message: 'Permissions error'
         })

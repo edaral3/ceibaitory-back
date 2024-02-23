@@ -67,6 +67,7 @@ const createOwnerUser = async (req: any, res: any): Promise<void> => {
   try {
     const { user, name, phone, pwd, companyName, phoneCompany, direction } =
       req.body
+
     const companyBody = {
       name: companyName,
       schemaName: companyName.trim().replaceAll(' ', '-'),

@@ -64,4 +64,4 @@ function onListening (): void {
   console.log('Listening on ' + PORT)
 }
 
-module.exports = app
+export default app

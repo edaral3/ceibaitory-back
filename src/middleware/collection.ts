@@ -37,10 +37,6 @@ const setCollection = (collectionName: string) => {
         req.CollectionProduct = getCollection('product', companyName)
         req.CollectionSale = getCollection('sale', companyName)
         break
-      case 'report':
-        req.CollectionProduct = getCollection('product', companyName)
-        req.CollectionSale = getCollection('sale', companyName)
-        break
       default:
         req.CollectionSupplier = getCollection('supplier', companyName)
     }
