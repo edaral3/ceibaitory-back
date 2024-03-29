@@ -9,15 +9,19 @@ const setCollection = (collectionName: string) => {
     }
     // const companyName = req.companyName;
     const companyName = req.companyName
-    req.collectionName = collectionName
+    req.collectionName = collectionName === "userOwner" ? "user" : collectionName
 
-    if (collectionName !== 'report') { req.CollectionCrud = getCollection(collectionName, companyName) }
+    if (collectionName !== 'report') { req.CollectionCrud = getCollection(req.collectionName, companyName) }
     switch (collectionName) {
-      case 'user':
-        req.CollectionCompany = getCollection('company', '')
-        req.CollectionBranch = getCollection('branch', companyName)
-        req.CollectionCrud = getCollection('user', companyName)
+      case 'userOwner':
+          req.CollectionCompany = getCollection('company', '')
+          req.CollectionCrud = getCollection('user', '')
         break
+        case 'user':
+          req.CollectionCompany = getCollection('company', '')
+          req.CollectionBranch = getCollection('branch', companyName)
+          req.CollectionCrud = getCollection('user', companyName)
+          break
       case 'purchase':
         req.CollectionProduct = getCollection('product', companyName)
         req.CollectionPurchase = getCollection(collectionName, companyName)

@@ -41,11 +41,10 @@ const createCompany = async (
 const createBranch = async (
   companyName: string,
   branchBody: any,
-  session: ClientSession
 ) => {
   const CollectionBranch = getCollection('branch', companyName)
   const branch = await CollectionBranch(branchBody)
-  const data = await branch.save({ session })
+  const data = await branch.save()
   return data._id
 }
 
@@ -85,7 +84,7 @@ const createOwnerUser = async (req: any, res: any): Promise<void> => {
       direction,
       phone: phoneCompany
     }
-    const branchId = await createBranch(companyName, branchBody, session)
+    const branchId = await createBranch(companyName, branchBody)
 
     status = 'usuario'
     const userBody = {

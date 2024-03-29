@@ -59,6 +59,7 @@ typings/
 .env
 
 build/
+dist/
 
 UserInfo.txt
 token.txt

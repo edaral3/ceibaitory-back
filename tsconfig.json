@@ -1,20 +1,17 @@
 {
   "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "lib": ["es2019"],
+    "outDir": "./dist",
+    "strict": true,
     "moduleResolution": "node",
-    "module": "esnext",
-    "target": "esnext",
-    "types": ["node"],
-    "strictNullChecks": true,
+    "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "outDir": "build",
-    "paths": {
-      "@/*": ["./src/*"]
-    }
-  },  
-  "ts-node": {
-    "esm": true, 
-    "experimentalSpecifierResolution": "node",
-  }, 
-  "include": ["./src/**/*", "./tests/**/*"],
-  "exclude": ["node_modules"], 
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "src//*.spec.ts"]
 }
