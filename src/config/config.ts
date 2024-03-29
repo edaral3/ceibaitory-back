@@ -12,7 +12,7 @@ const config = {
       port: process.env.DB_REDIS_PORT || ""
     }
   },
-  secret: process.env.SECRET || ""
+  secret: process.env.SECRET || "" 
 }
 
 export default config
