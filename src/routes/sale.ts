@@ -1,8 +1,8 @@
-import express from 'express'
-import sale from '../controller/sale'
-import { setCollection } from '../middleware/collection'
-import { validateToken } from '../middleware/auth'
-import { validator } from '../middleware/bodyValidator'
+const express = require( 'express')
+const sale = require( '../controller/sale')
+const { setCollection } = require( '../middleware/collection')
+const { validateToken } = require( '../middleware/auth')
+const { validator } = require( '../middleware/bodyValidator')
 
 const router = express.Router()
 
@@ -16,4 +16,4 @@ router.get('/', validateToken(['owner', 'admin', 'vendedor']), setCollection('sa
 
 router.get('/bill/:uuid', validateToken(['owner', 'admin']), setCollection('sale'), sale.getBill)
 
-export default router
+module.exports = router

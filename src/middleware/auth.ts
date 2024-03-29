@@ -1,11 +1,11 @@
-import jwt from 'jsonwebtoken'
-import config from '../config/config'
-import { getCollection } from '../models'
+const jwt = require( 'jsonwebtoken')
+const config = require( '../config/config')
+const { getCollection } = require( '../models')
 
 const validateToken = (roles: string[]) => {
   return (req: any, res: any, next: any) => {
     const token = req.headers.authorization
-    jwt.verify(token, config.secret, async (error, decoded) => {
+    jwt.verify(token, config.secret, async (error: any, decoded: any) => {
       if (error) {
         return res.status(401).json({
           message: 'Invalid token'

@@ -1,9 +1,9 @@
-import express from 'express'
-import user from '../controller/user'
-import { setCollection } from '../middleware/collection'
-import { validateToken } from '../middleware/auth'
-import { encriptData } from '../middleware/encriptData'
-import { validator } from '../middleware/bodyValidator'
+const express = require( 'express')
+const user = require( '../controller/user')
+const { setCollection } = require( '../middleware/collection')
+const { validateToken } = require( '../middleware/auth')
+const { encriptData } = require( '../middleware/encriptData')
+const { validator } = require( '../middleware/bodyValidator')
 
 const router = express.Router()
 

@@ -1,10 +1,10 @@
-import Mongoose, { type ClientSession } from 'mongoose'
-import { generateBill, cancelBill, getClientDetails } from './bill'
+const Mongoose = require( 'mongoose')
+const { generateBill, cancelBill, getClientDetails } = require( './bill')
 
 const updateProduct = async (
   ControllerProduct: any,
   products: any,
-  session: ClientSession,
+  session: any,
   incDes: 1 | -1 = -1
 ): Promise<void> => {
   for (const product of products) {

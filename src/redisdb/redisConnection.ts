@@ -1,11 +1,11 @@
-import { createClient } from 'redis'
-import config from '../config/config'
+const { createClient } = require( 'redis')
 
-const redisConfig = config.db.redis
 let redisClient: any
 const redisConnection = async () => {
   if (redisClient) return redisClient
+  const {db} = require( '../config/config')
 
+  const redisConfig = db.redis || ""
   redisClient = createClient({
     password: redisConfig.password,
     socket: {

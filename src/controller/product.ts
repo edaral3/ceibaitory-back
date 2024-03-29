@@ -1,10 +1,10 @@
-import {
+const {
   createItem,
   deleteItem,
   updateItem,
   getOneItem,
   getAllItems
-} from '../common/CRUD/genericCRUD'
+} = require( '../common/CRUD/genericCRUD')
 
 export default {
   create: createItem,

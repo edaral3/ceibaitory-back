@@ -1,14 +1,14 @@
-import certifiers from '../utils/certifiers'
-import CryptoJS from 'crypto-js'
-import config from '../config/config'
-import { redisConnection } from '../redisdb/redisConnection'
-import {
+const certifiers = require( '../utils/certifiers')
+const CryptoJS = require( 'crypto-js')
+const config = require( '../config/config')
+const { redisConnection } = require( '../redisdb/redisConnection')
+const {
   getClientInformationMP,
   generateBillMP,
   cancelBillMP,
   getPDFMP,
   generateTokenMP
-} from './megaprint'
+} = require( './megaprint')
 
 const deleteToken = async (companyName: string): Promise<void> => {
   const redisClient = await redisConnection()

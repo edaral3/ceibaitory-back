@@ -1,20 +1,20 @@
-import { mongoConnection } from './mongodb/mongoConnection'
-import http from 'http'
-import express from 'express'
-import cors from 'cors'
+const { mongoConnection } = require('./mongodb/mongoConnection')
+const http = require( 'http')
+const express = require( 'express')
+const cors = require( 'cors')
 
-import sale from './routes/sale'
-import purchase from './routes/purchase'
-import client from './routes/client'
-import store from './routes/store'
-import branch from './routes/branch'
-import user from './routes/user'
-import supplier from './routes/supplier'
-import product from './routes/product'
-import credit from './routes/credit'
-import autenticacion from './routes/autenticacion'
-import reports from './routes/reports'
-import root from './routes/root'
+const sale = require( './routes/sale')
+const purchase = require( './routes/purchase')
+const client = require( './routes/client')
+const store = require( './routes/store')
+const branch = require( './routes/branch')
+const user = require( './routes/user')
+const supplier = require( './routes/supplier')
+const product = require( './routes/product')
+const credit = require( './routes/credit')
+const autenticacion = require( './routes/autenticacion')
+const reports = require( './routes/reports')
+const root = require( './routes/root')
 
 const app = express()
 

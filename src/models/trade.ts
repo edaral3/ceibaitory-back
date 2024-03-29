@@ -1,4 +1,4 @@
-import Mongoose from 'mongoose'
+const Mongoose = require('mongoose')
 
 const trade = new Mongoose.Schema({
   name: {

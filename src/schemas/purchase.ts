@@ -1,6 +1,6 @@
-import Joi from 'joi'
-import messages from './messageErrors/messagesErrors'
-import trade from './trade'
+const Joi = require( 'joi')
+const messages = require( './messageErrors/messagesErrors')
+const trade = require( './trade')
 
 const schema = Joi.object({
   date: Joi.string().required().messages(messages.validationDateMessages),

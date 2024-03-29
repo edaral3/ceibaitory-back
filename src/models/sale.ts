@@ -1,7 +1,7 @@
-import { Schema } from 'mongoose'
-import trade from './trade'
+const { Schema } = require( 'mongoose')
+const trade = require('./trade')
 
-const getSchema = (company: string): Schema => {
+const getSchema = (company: string): any => {
   const Bill = new Schema({
     name: {
       type: String,

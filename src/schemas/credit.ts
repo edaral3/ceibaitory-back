@@ -1,6 +1,6 @@
-import trade from './trade'
-import Joi from 'joi'
-import messages from './messageErrors/messagesErrors'
+const trade = require( './trade')
+const Joi = require( 'joi')
+const messages = require( './messageErrors/messagesErrors')
 
 const schema = Joi.object({
   total: Joi.number()

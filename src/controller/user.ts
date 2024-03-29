@@ -1,14 +1,14 @@
-import Mongoose, { type ClientSession } from 'mongoose'
-import {
+const Mongoose = require( 'mongoose')
+const {
   createItem,
   deleteItem,
   updateItem,
   getOneItem,
   getAllItems
-} from '../common/CRUD/genericCRUD'
-import { getCollection } from '../models'
+} = require( '../common/CRUD/genericCRUD')
+const { getCollection } = require( '../models')
 
-import { getClientDetails } from './bill'
+const { getClientDetails } = require( './bill')
 
 const getBillInformation = async (req: any, res: any): Promise<void> => {
   try {
@@ -31,7 +31,7 @@ const getBillInformation = async (req: any, res: any): Promise<void> => {
 const createCompany = async (
   CollectionCompany: any,
   companyBody: any,
-  session: ClientSession
+  session: any
 ) => {
   const company = await CollectionCompany(companyBody)
   const data = await company.save({ session })
@@ -51,7 +51,7 @@ const createBranch = async (
 const createUser = async (
   CollectionUser: any,
   userBody: any,
-  session: ClientSession
+  session: any
 ) => {
   const user = await CollectionUser(userBody)
   const data = await user.save({ session })

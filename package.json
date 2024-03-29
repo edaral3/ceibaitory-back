@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node ./dist/index.js",
     "build": "tsc -p .",
-    "dev": "npx nodemon ./dist/index.js",
+    "dev": "node ./dist/index.js",
     "lint": "eslint --ext .ts .",
     "lint:fix": "eslint --fix --ext .ts ."
   },

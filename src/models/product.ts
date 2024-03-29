@@ -1,6 +1,6 @@
-import { Schema } from 'mongoose'
+const { Schema } = require( 'mongoose')
 
-const getSchema = (company: string): Schema => {
+const getSchema = (company: string): any => {
   const product = new Schema({
     name: {
       type: String,

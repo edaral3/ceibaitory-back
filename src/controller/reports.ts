@@ -1,6 +1,6 @@
 // @ts-nocheck
-import { jsPDF } from 'jspdf'
-import 'jspdf-autotable'
+const { jsPDF } = require( 'jspdf')
+require('jspdf-autotable')
 
 const getSalesByDay = async (CollectionSale: any, date: string) => {
   const sales = await CollectionSale.find({ canceled: false })

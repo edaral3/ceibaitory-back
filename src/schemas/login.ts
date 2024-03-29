@@ -1,5 +1,5 @@
-import Joi from 'joi'
-import messages from './messageErrors/messagesErrors'
+const Joi = require( 'joi')
+const messages = require( './messageErrors/messagesErrors')
 
 const schema = Joi.object({
   user: Joi.string()

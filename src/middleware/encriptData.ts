@@ -1,6 +1,6 @@
-import bcrypt from 'bcrypt'
-import CryptoJS from 'crypto-js'
-import config from '../config/config'
+const bcrypt = require( 'bcrypt')
+const CryptoJS = require( 'crypto-js')
+const config = require( '../config/config')
 
 const encriptData = (bodyName: string) => {
   return (req: any, _res: any, next: any) => {

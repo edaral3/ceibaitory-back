@@ -1,6 +1,6 @@
-import Joi from 'joi'
-import messages from './messageErrors/messagesErrors'
-import trade from './trade'
+const Joi = require( 'joi')
+const messages = require( './messageErrors/messagesErrors')
+const trade = require( './trade')
 
 const schema = Joi.object({
   total: Joi.number().allow(0).min(0).required().messages(messages.validationStringMessages),

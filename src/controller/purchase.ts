@@ -1,9 +1,9 @@
-import Mongoose, { type ClientSession } from 'mongoose'
+const Mongoose= require( 'mongoose')
 
 const updateProduct = async (
   CollectionProduct: any,
   products: any,
-  session: ClientSession,
+  session: any,
   incDec: 1 | -1 = 1
 ): Promise<void> => {
   for (const product of products) {

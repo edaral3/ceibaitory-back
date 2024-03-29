@@ -1,4 +1,4 @@
-import Joi from 'joi'
+const Joi = require( 'joi')
 import messages from './messageErrors/messagesErrors'
 
 const schema = Joi.object({

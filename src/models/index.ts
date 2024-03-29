@@ -1,14 +1,14 @@
-import Mongoose from 'mongoose'
+const Mongoose = require( 'mongoose')
 
-import client from './client'
-import user from './user'
-import product from './product'
-import supplier from './supplier'
-import credit from './credit'
-import sale from './sale'
-import purchase from './purchase'
-import company from './company'
-import branch from './branch'
+const client = require( './client')
+const user = require( './user')
+const product = require( './product')
+const supplier = require( './supplier')
+const credit = require( './credit')
+const sale = require( './sale')
+const purchase = require( './purchase')
+const company = require( './company')
+const branch = require( './branch')
 
 const models = {
   client,

@@ -1,17 +1,17 @@
-import axios from 'axios'
-import decode from 'unescape'
+const axios = require( 'axios')
+const decode = require( 'unescape')
 
-import {
+const {
   buildXmlBill,
   buildRequestBill,
   buildRequestCancellBill,
   buildClientRequest,
   buildCancelBill
-} from '../utils/megaprint/certifier'
+} = require( '../utils/megaprint/certifier')
 
-import {
+const {
   getPDF
-} from '../utils/megaprint/templates'
+} = require( '../utils/megaprint/templates')
 
 const getToken = async (credentials: string): Promise<string> => {
   const newToken = await axios.post(
@@ -169,7 +169,7 @@ const getClientInformationMP = async (
   }
 }
 
-const beautifulerName = (name): string => {
+const beautifulerName = (name: any): string => {
   if (name.includes(',')) {
     return name.replace(',', '').replace(' ', ' ')
   } else {
