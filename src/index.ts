@@ -21,11 +21,10 @@ const app = express()
 const getCors = (): any => {
   const restrictedCors = {
     origin: [
-      '*'
+      'https://ceibaitory.vercel.app'
     ],
     methods: ['GET', 'POST', 'DELETE', 'UPDATE', 'PUT'],
-    headers: ['*']
-    // headers: ['authorization', 'Content-Type']
+    headers: ['authorization', 'Content-Type']
   }
 
   return restrictedCors
