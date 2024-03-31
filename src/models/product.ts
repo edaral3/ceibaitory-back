@@ -40,7 +40,7 @@ const getSchema = (company: string): Schema => {
     ubication: {
       type: String,
       required: false,
-      default: false
+      default: ''
     },
     supplier: {
       type: Schema.Types.ObjectId,
