@@ -722,7 +722,7 @@ const createCreditReport = async (
   const doc = new jsPDF();
   doc.autoTable(buildHeader(companyName, "Credito"));
 
-  const date = new Date(cerdit.date).toLocaleString("en-US", {
+  const date = new Date(cerdit.date).toLocaleString("es-MX", {
     timeZone: "America/Guatemala",
   });
 
@@ -737,20 +737,20 @@ const createCreditReport = async (
     payments.push([
       index + 1,
       `Q${item.amount}`,
-      new Date(item.date).toLocaleString("en-US", {
+      new Date(item.date).toLocaleString("es-MX", {
         timeZone: "America/Guatemala",
       }),
     ]);
   });
-  doc.autoTable(buildCreditTittle("Productos"));
 
+  doc.autoTable(buildCreditTittle("Pagos"));
   doc.autoTable({
     body: payments,
     head: [["#", "Pago", "Fecha"]],
     ...getColorTble("CF"),
   });
 
-  doc.autoTable(buildCreditTittle("Pagos"));
+  doc.autoTable(buildCreditTittle("Productos"));
   doc.autoTable({
     body: products,
     head: [["#", "Nombre", "Cantidad", "Precio venta"]],
