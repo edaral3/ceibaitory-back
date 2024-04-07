@@ -36,32 +36,34 @@ const createCredit = async (req: any, res: any): Promise<void> => {
     })
     let newBill: any = null
     if (company.billingCompanyCredentials) {
-      if (client.nit) {
-        const billingInformation = await getClientDetails(
+      if (client.nit && client.nit !== '') {
+        if (client.nit && client.nit !== 'cf') {
+          const billingInformation = await getClientDetails(
+            req.CollectionCompany,
+            req.companyName,
+            client.nit
+          )
+          req.body.clientNit = client.nit
+          req.body.direction = billingInformation.direction
+          req.body.clientName = billingInformation.name
+        } else {
+          req.body.clientNit = 'CF'
+          req.body.direction = 'ciudad'
+          req.body.clientName = 'Consumidor final'
+        }
+        const bill = await generateBill(
           req.CollectionCompany,
           req.companyName,
-          client.nit
+          req.body
         )
-        req.body.clientNit = client.nit
-        req.body.direction = billingInformation.direction
-        req.body.clientName = billingInformation.name
-      } else {
-        req.body.clientNit = 'CF'
-        req.body.direction = 'ciudad'
-        req.body.clientName = 'Consumidor final'
-      }
-      const bill = await generateBill(
-        req.CollectionCompany,
-        req.companyName,
-        req.body
-      )
 
-      newBill = {
-        name: req.body.clientName,
-        nit: req.body.clientNit,
-        direction: req.body.direction,
-        uuid: bill.uuid,
-        uuidEmision: bill.uuidEmision
+        newBill = {
+          name: req.body.clientName,
+          nit: req.body.clientNit,
+          direction: req.body.direction,
+          uuid: bill.uuid,
+          uuidEmision: bill.uuidEmision
+        }
       }
     }
     const newCredit: any = {
