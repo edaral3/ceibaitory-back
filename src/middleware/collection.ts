@@ -7,11 +7,13 @@ const setCollection = (collectionName: string) => {
       next()
       return
     }
-    // const companyName = req.companyName;
-    const companyName = req.companyName
+    let companyName = req.companyName;
+    if(companyName){
+      companyName = req.companyName.trim().toLowerCase().replaceAll(' ','-')
+    }
     req.collectionName = collectionName === "userOwner" ? "user" : collectionName
 
-    if (collectionName !== 'report') { req.CollectionCrud = getCollection(req.collectionName, companyName) }
+    if (collectionName !== 'report' && companyName) { req.CollectionCrud = getCollection(req.collectionName, companyName) }
     switch (collectionName) {
       case 'userOwner':
           req.CollectionCompany = getCollection('company', '')
@@ -19,8 +21,10 @@ const setCollection = (collectionName: string) => {
         break
         case 'user':
           req.CollectionCompany = getCollection('company', '')
-          req.CollectionBranch = getCollection('branch', companyName)
-          req.CollectionCrud = getCollection('user', companyName)
+          req.CollectionCrud = getCollection('user', '')
+          if(companyName){
+            req.CollectionBranch = getCollection('branch', companyName)
+          }
           break
       case 'purchase':
         req.CollectionProduct = getCollection('product', companyName)

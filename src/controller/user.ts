@@ -69,7 +69,7 @@ const createOwnerUser = async (req: any, res: any): Promise<void> => {
 
     const companyBody = {
       name: companyName,
-      schemaName: companyName.trim().replaceAll(' ', '-'),
+      schemaName: companyName.trim().toLowerCase().replaceAll(' ','-'),
       ownerName: name
     }
     const companyId = await createCompany(
@@ -84,7 +84,7 @@ const createOwnerUser = async (req: any, res: any): Promise<void> => {
       direction,
       phone: phoneCompany
     }
-    const branchId = await createBranch(companyName, branchBody)
+    const branchId = await createBranch(companyName.trim().toLowerCase().replaceAll(' ','-'), branchBody)
 
     status = 'usuario'
     const userBody = {

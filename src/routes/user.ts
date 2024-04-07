@@ -11,7 +11,7 @@ router.post('/', validateToken(['owner']), validator('user'), encriptData('user'
 
 router.post('/userOwner', encriptData('user'), setCollection('userOwner'), user.createOwnerUser)
 
-router.put('/addFelInformation', encriptData('company'), setCollection('company'), user.addFelInformation)
+//router.put('/addFelInformation', encriptData('company'), setCollection('company'), user.addFelInformation)
 
 router.put('/:id', validateToken(['owner']), validator('user'), setCollection('user'), user.update)
 
