@@ -173,7 +173,7 @@ const getAllCredits = async (req: any, res: any): Promise<any> => {
   try {
     const items = await req.CollectionCredit.find()
       .populate('client')
-      .sort({ date: -1 })
+      .sort({ date: -1 }).limit(50);
     res.send(items)
   } catch (error) {
     res.status(500).json({ message: 'Error gettin all purchases' })
