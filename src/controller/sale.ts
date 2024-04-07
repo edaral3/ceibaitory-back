@@ -62,7 +62,7 @@ const createSale = async (req: any, res: any): Promise<void> => {
     await sale.save({ session })
 
     await session.commitTransaction()
-    res.send({ message: 'OK' })
+    res.send({ message: 'OK', sale: newSale })
   } catch (error: any) {
     await session.abortTransaction()
     if (error.type === 400) {

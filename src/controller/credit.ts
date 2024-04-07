@@ -75,7 +75,7 @@ const createCredit = async (req: any, res: any): Promise<void> => {
     const credit = new req.CollectionCredit(newCredit)
     await credit.save({ session })
     await session.commitTransaction()
-    res.send('OK')
+    res.send({ message: 'OK', sale: newCredit })
   } catch (error) {
     await session.abortTransaction()
     res.status(500).json({ message: 'Error creating credit' })

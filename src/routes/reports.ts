@@ -20,4 +20,7 @@ router.get('/top10ABC', validateToken(['owner']), setCollection('report'), repor
 
 router.get('/productsOutOfStockOfExpired', validateToken(['owner']), setCollection('report'), reports.productsOutOfStockOfExpired)
 
+router.post('/getCreditInfo', validateToken(['owner', 'admin', 'vendedor']), reports.getCreditInfo)
+
+
 export default router

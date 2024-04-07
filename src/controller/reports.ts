@@ -660,7 +660,114 @@ const productsOutOfStockOfExpired = async (
     return res.status(500).json({ message: 'Error creando el reporte' })
   }
 }
+
+
+const buildCreditInfo = (date: string, name: string, nit: string): any => {
+  return {
+    body: [
+      [
+        {
+          content: 'Fecha de compra: ' + date + '\nNombre: ' + name+ '\nNIT: ' + nit,
+          styles: {
+            halign: 'right'
+          }
+        }
+      ]
+    ],
+    theme: 'plain'
+  }
+}
+
+const buildCreditTittle = (tittle: string): any => {
+  return {
+    body: [
+      [
+        {
+          content: tittle,
+          styles: {
+            halign: 'right'
+          }
+        }
+      ]
+    ],
+    theme: 'plain'
+  }
+}
+
+const buildCreditTotals = (total: string, paid: string): any => {
+  return {
+    body: [
+      [
+        {
+          content: `Total: ${total} \n Total cancelado a la fecha: ${paid}`,
+          styles: {
+            halign: 'right'
+          }
+        }
+      ]
+    ],
+    theme: 'plain'
+  }
+}
+
+const createCreditReport = async (
+  companyName: string,
+  cerdit: any
+): Promise<any> => {
+  const doc = new jsPDF()
+  doc.autoTable(buildHeader(companyName, 'Credito'))
+
+  const date = new Date(cerdit.date).toLocaleString('en-US', { timeZone: 'America/Guatemala' })
+  
+  doc.autoTable(buildCreditInfo(date, cerdit.client.name, cerdit.client.nit))
+
+  const products = []
+  const payments = []
+  cerdit.products.forEach((item: any, index: number) => {
+    products.push([
+          index + 1,
+          item.name,
+          item.amount,
+          `Q${item.salesPrice}`
+        ])
+  })
+  cerdit.payments.forEach((item: any, index: number) => {
+    payments.push([
+          index + 1,
+          `Q${item.amount}`,
+          new Date(item.date).toLocaleString('en-US', { timeZone: 'America/Guatemala' })
+        ])
+  })
+  doc.autoTable(buildCreditTittle("Productos"))
+
+  doc.autoTable({
+    body: payments,
+    head: [['#', 'Pago', 'Fecha']],
+    ...getColorTble('CF')
+  })
+
+  doc.autoTable(buildCreditTittle("Pagos"))
+  doc.autoTable({
+    body: products,
+    head: [['#', 'Nombre', 'Cantidad', 'Precio venta']],
+    ...getColorTble('CF')
+  })
+
+  doc.autoTable(buildCreditTotals("Q"+cerdit.total, "Q"+cerdit.paid))
+  
+  return doc.output('datauristring')
+}
+
+const getCreditInfo = async (req: any, res: any): Promise<void> => {
+  const pdf = await createCreditReport(
+    req.companyName,
+    req.body.credit,
+  )
+  res.send({ pdf })
+}
+
 export default {
+  getCreditInfo,
   getDayReports,
   getInventoryExcel,
   getSalesReport,
