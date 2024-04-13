@@ -16,10 +16,6 @@ const login = async (req: any, res: any): Promise<any> => {
     }
     if (bcrypt.compareSync(req.body.pwd, user.pwd)) {
       const branches: any = []
-      for (const branch of user.branch) {
-        const item = await req.CollectionBranch.findById(branch)
-        branches.push({ name: item.name, _id: item._id })
-      }
       if (user.type === 'owner') {
         const branchesAux = await req.CollectionBranch.find()
         for (const branch of branchesAux) {
@@ -38,6 +34,7 @@ const login = async (req: any, res: any): Promise<any> => {
         branches,
         roles: user.type
       }
+
       const jwToken = jwt.sign(JSON.stringify(newToken), config.secret)
 
       return res.send({ jwt: jwToken })
