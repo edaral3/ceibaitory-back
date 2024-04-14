@@ -14,6 +14,6 @@ router.delete('/:id', validateToken(['owner', 'admin']), setCollection('client')
 
 router.get('/:id', validateToken(['owner', 'admin']), setCollection('client'), client.getOne)
 
-router.get('/', validateToken(['owner', 'admin']), setCollection('client'), client.getAll)
+router.get('/', validateToken(['owner', 'admin', 'vendedor']), setCollection('client'), client.getAll)
 
 export default router
