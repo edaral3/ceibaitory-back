@@ -38,7 +38,7 @@ const createSale = async (req: any, res: any): Promise<void> => {
         req.body.direction = 'ciudad'
         req.body.clientName = 'Consumidor final'
       }
-
+      req.body.clientNit = req.body.clientNit.toUpperCase()
       const bill = await generateBill(
         req.CollectionCompany,
         req.companyName,
