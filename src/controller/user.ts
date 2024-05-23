@@ -16,7 +16,7 @@ const getBillInformation = async (req: any, res: any): Promise<void> => {
     const billingInformation = await getClientDetails(
       req.CollectionCompany,
       req.companyName,
-      req.params.nit
+      req.params.nit.toUpperCase()
     )
     res.send(billingInformation)
   } catch (error: any) {
