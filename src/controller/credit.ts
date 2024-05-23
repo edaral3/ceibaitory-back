@@ -42,7 +42,7 @@ const createCredit = async (req: any, res: any): Promise<void> => {
           req.companyName,
           client.nit
         )
-        req.body.clientNit = client.nit
+        req.body.clientNit = client.nit.toUpperCase()
         req.body.direction = billingInformation.direction
         req.body.clientName = billingInformation.name
       } else {
