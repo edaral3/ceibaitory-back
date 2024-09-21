@@ -17,11 +17,11 @@ const setCollection = (collectionName: string) => {
     switch (collectionName) {
       case 'userOwner':
           req.CollectionCompany = getCollection('company', '')
-          req.CollectionCrud = getCollection('user', '')
+          req.CollectionCrud = getCollection('user', companyName)
         break
         case 'user':
           req.CollectionCompany = getCollection('company', '')
-          req.CollectionCrud = getCollection('user', '')
+          req.CollectionCrud = getCollection('user', companyName)
           if(companyName){
             req.CollectionBranch = getCollection('branch', companyName)
           }

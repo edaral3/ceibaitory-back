@@ -28,6 +28,10 @@ const getCollection = (collectionName: string, companyName: string): any => {
   }`
 
   try {
+    if(collectionName === 'user' && companyName) {
+      Mongoose.deleteModel('user_'); 
+      return Mongoose.model(schemaName, models[collectionName](companyName))
+    }  
     return Mongoose.model(schemaName)
   } catch (error) {
     return Mongoose.model(schemaName, models[collectionName](companyName))

@@ -9,7 +9,8 @@ const login = async (req: any, res: any): Promise<any> => {
     const user = await req.CollectionCrud.findOne({
       user: req.body.user
     }).populate('company')
-    req.CollectionBranch = getCollection('branch', user.company.schemaName)
+        const company = user.company.schemaName?user.company.schemaName.trim().toLowerCase().replaceAll(' ','-'):''
+    req.CollectionBranch = getCollection('branch', company)
 
     if (!user) {
       return res.status(401).json({ message: msj })

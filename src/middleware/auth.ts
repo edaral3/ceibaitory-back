@@ -23,9 +23,10 @@ const validateToken = (roles: string[]) => {
           message: 'Permissions error'
         })
       }
-      const userCollection = getCollection('user', decoded.company.name.trim().toLowerCase().replaceAll(' ','-'))
+      const company = decoded.company.name?decoded.company.name?.toLowerCase().replaceAll(' ','-'):''
+      const userCollection = getCollection('user', company)
       const user = await userCollection.findById(decoded.id)
-      if (user.type !== 'owner' && !validateBranch(user.branch, req.headers.branch)) {
+      if (user.type !== 'owner' && !user.branch.find((item: any) => item._id == req.headers.branch)) {
         return res.status(401).json({
           message: 'Permissions error'
         })

@@ -42,7 +42,8 @@ const createBranch = async (
   companyName: string,
   branchBody: any,
 ) => {
-  const CollectionBranch = getCollection('branch', companyName)
+  const company = companyName?companyName.toLowerCase().replaceAll(' ','-'):''
+  const CollectionBranch = getCollection('branch', company)
   const branch = await CollectionBranch(branchBody)
   const data = await branch.save()
   return data._id
