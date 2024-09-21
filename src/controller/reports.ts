@@ -611,7 +611,7 @@ const salesByYear = async (CollectionSale: any, date: string) => {
     });
 
     const splitDate = start.toISOString().split('-')
-    data.labels.push(`${splitDate[0]}/${splitDate[1]}`)
+    data.labels.push(`${splitDate[1]}/${splitDate[0]}`)
     
     let revenue = 0
     let salesMoney = 0
@@ -627,6 +627,9 @@ const salesByYear = async (CollectionSale: any, date: string) => {
     finish.setMonth(finish.getMonth() - 1)
     start.setMonth(start.getMonth() - 1)
   }
+  data.labels = data.labels.reverse()
+  data.sales = data.sales.reverse()
+  data.sales = data.sales.reverse()
   return data;
 };
 
