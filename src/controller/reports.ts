@@ -1,28 +1,26 @@
 // @ts-nocheck
+import { not } from "joi";
 import { jsPDF } from "jspdf";
 import "jspdf-autotable";
 
-const getSalesByDay = async (CollectionSale: any, date: string) => {
-  const sales = await CollectionSale.find({ canceled: false });
-  const salesAux = [];
+const getSalesBilledByDay = async (CollectionSale: any, date: string) => {
+  const start = new Date(date)
+  const finish = new Date(date)
+  finish.setHours(finish.getHours() + 24)
+  const sales = await CollectionSale.find({ canceled: false, bill: { $ne: null }, date: {$gte: start, $lte: finish}});
+  let total = 0;
   for (const item of sales) {
-    const saleDate = new Date(item.date)
-      .toLocaleString("es-GT", {
-        timeZone: "America/Guatemala",
-      })
-      .split(",")[0];
-    if (saleDate === date) {
-      salesAux.push(item);
-    }
+    total += item.total;
   }
-  return salesAux;
+
+  return Math.round(total * 100) / 100;
 };
 
-const getSalesPerDay = async (
-  CollectionSale: any,
-  date: string
-): Promise<any> => {
-  const sales = await getSalesByDay(CollectionSale, date);
+const getSalesByDay = async (CollectionSale: any, date: string) => {
+  const start = new Date(date)
+  const finish = new Date(date)
+  finish.setHours(finish.getHours() + 24)
+  const sales = await CollectionSale.find({ canceled: false, date: {$gte: start, $lte: finish}});
   let total = 0;
   for (const item of sales) {
     total += item.total;
@@ -35,7 +33,10 @@ const getAmountSales = async (
   CollectionSale: any,
   date: string
 ): Promise<any> => {
-  const sales = await getSalesByDay(CollectionSale, date);
+  const start = new Date(date)
+  const finish = new Date(date)
+  finish.setHours(finish.getHours() + 24)
+  const sales = await CollectionSale.find({ canceled: false, date: {$gte: start, $lte: finish}});
   return sales.length;
 };
 
@@ -43,7 +44,10 @@ const getUtilityPerDay = async (
   CollectionSale: any,
   date: string
 ): Promise<any> => {
-  const sales = await getSalesByDay(CollectionSale, date);
+  const start = new Date(date)
+  const finish = new Date(date)
+  finish.setHours(finish.getHours() + 24)
+  const sales = await CollectionSale.find({ canceled: false, date: {$gte: start, $lte: finish}});
   let total = 0;
   for (const sale of sales) {
     for (const item of sale.products) {
@@ -121,7 +125,9 @@ const filterByCategory = (itemsCategory, items): any => {
 };
 
 const getTop10ABC = async (req: any, res: any): Promise<void> => {
-  const sales = await getListSaleMonth(req.CollectionSale, req.query.date);
+  const date = new Date( req.query.date);
+
+  const sales = await getListSaleMonth(req.CollectionSale,date);
   try {
     const list: any[] = [];
     let list2: any[] = [];
@@ -160,15 +166,13 @@ const getTop10ABC = async (req: any, res: any): Promise<void> => {
 };
 
 const getDayReports = async (req: any, res: any): Promise<any> => {
-  const date = new Date(req.query.date)
-    .toLocaleString("es-GT", {
-      timeZone: "America/Guatemala",
-    })
-    .split(",")[0];
+  const date = new Date(req.query.date);
+
   const CollectionSale = req.CollectionSale;
   try {
     const data = {
-      dailySales: await getSalesPerDay(CollectionSale, date),
+      dailyBillingSales: await getSalesBilledByDay(CollectionSale, date),
+      dailySales: await getSalesByDay(CollectionSale, date),
       utilityByDay: await getUtilityPerDay(CollectionSale, date),
       salesAmount: await getAmountSales(CollectionSale, date),
     };
@@ -268,19 +272,14 @@ const getListSaleRange = async (
 
 const getListSaleMonth = async (
   CollectionSale: any,
-  date: string
+  date: Date
 ): Promise<any> => {
-  const dateAux = new Date(date).toISOString().slice(0, 7);
-  const sales = await CollectionSale.find({ canceled: false });
-  const salesAux = [];
-  for (const item of sales) {
-    const saleDate = new Date(item.date).toISOString().slice(0, 7);
-    if (dateAux === saleDate) {
-      salesAux.push(item);
-    }
-  }
+  const start = new Date(date.setDate(1))
+  date.setMonth(date.getMonth() + 1)
+  const finish = new Date(date)
+  const sales = await CollectionSale.find({ canceled: false, date: {$gte: start, $lte: finish} });
 
-  return salesAux;
+  return sales;
 };
 
 const getProducts = async (CollectionProduct): Promise<any> => {
@@ -582,28 +581,19 @@ const getExpiringProducts = async (req: any, res: any): Promise<void> => {
   }
 };
 
-const compareMonth = (date1: string, date2: string) => {
-  const date1Split = date1.split("/");
-  const date2Split = date2.split("/");
-  return date1Split[1] === date2Split[1] && date1Split[2] === date2Split[2];
-};
-
 const salesByMonth = async (CollectionSale: any, date: string) => {
-  const sales = await CollectionSale.find({ canceled: false }).sort({
+  const start = new Date(date.setDate(1))
+  date.setMonth(date.getMonth() + 1)
+  const finish = new Date(date)
+  const sales = await CollectionSale.find({ canceled: false,  date: {$gte: start, $lte: finish} }).sort({
     date: 1,
   });
   const dates = [];
   for (const item of sales) {
-    const saleDate = new Date(item.date)
-      .toLocaleString("es-GT", {
-        timeZone: "America/Guatemala",
-      })
-      .split(",")[0];
-    if (compareMonth(date, saleDate)) {
+    const saleDate = item.date.toISOString().split('T')[0]
       if (!dates.includes(saleDate)) {
         dates.push(saleDate);
       }
-    }
   }
   return dates;
 };
@@ -613,9 +603,12 @@ const salesByDay = async (CollectionSale: any, dates: any) => {
   const data1 = [];
   const data2 = [];
   for (const date of dates) {
-    labels.push(date.split("/")[0]);
-    data1.push(await getUtilityPerDay(CollectionSale, date));
-    data2.push(await getSalesPerDay(CollectionSale, date));
+    const [year, month, day] = date.split("-")
+    const dateAux = new Date(date)
+
+    labels.push(`${day}/${month}/${year}`);
+    data1.push(await getUtilityPerDay(CollectionSale, dateAux));
+    data2.push(await getSalesByDay(CollectionSale, dateAux));
   }
   return { labels, data1, data2 };
 };
@@ -623,10 +616,6 @@ const salesByDay = async (CollectionSale: any, dates: any) => {
 const montlyReports = async (req: any, res: any): Promise<void> => {
   try {
     const date = new Date(req.query.date)
-      .toLocaleString("es-GT", {
-        timeZone: "America/Guatemala",
-      })
-      .split(",")[0];
     const dates = await salesByMonth(req.CollectionSale, date);
     const { labels, data1, data2 } = await salesByDay(
       req.CollectionSale,
