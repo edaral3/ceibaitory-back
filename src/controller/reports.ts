@@ -598,6 +598,38 @@ const salesByMonth = async (CollectionSale: any, date: string) => {
   return dates;
 };
 
+const salesByYear = async (CollectionSale: any, date: string) => {
+  const start = new Date(date)
+  start.setDate(1)
+  const finish = new Date(start)
+  finish.setMonth(finish.getMonth() + 1)
+  const data = { labels:[], revenue: [], sales: [] }
+
+  for (let i = 0 ; i < 12; i++) {
+    const sales = await CollectionSale.find({ canceled: false,  date: {$gte: start, $lte: finish} }).sort({
+      date: 1,
+    });
+
+    const splitDate = start.toISOString().split('-')
+    data.labels.push(`${splitDate[0]}/${splitDate[1]}`)
+    
+    let revenue = 0
+    let salesMoney = 0
+    for (const sale of sales) {
+      for (const item of sale.products) {
+        revenue += item.amount * item.salesPrice - item.amount * item.priceCost;
+      }
+      salesMoney += sale.total;
+    }
+    data.revenue.push(Math.round(revenue * 100) / 100)
+    data.sales.push(Math.round(salesMoney * 100) / 100)
+
+    finish.setMonth(finish.getMonth() - 1)
+    start.setMonth(start.getMonth() - 1)
+  }
+  return data;
+};
+
 const salesByDay = async (CollectionSale: any, dates: any) => {
   const labels = [];
   const data1 = [];
@@ -622,6 +654,16 @@ const montlyReports = async (req: any, res: any): Promise<void> => {
       dates
     );
     return res.send({ labels, data1, data2 });
+  } catch (error) {
+    return res.status(500).json({ message: "Error creando el reporte" });
+  }
+};
+
+const sixMonthsReports = async (req: any, res: any): Promise<void> => {
+  try {
+    const date = new Date(req.query.date)
+    const data = await salesByYear(req.CollectionSale, date);
+    return res.send(data);
   } catch (error) {
     return res.status(500).json({ message: "Error creando el reporte" });
   }
@@ -770,4 +812,5 @@ export default {
   getTop10ABC,
   montlyReports,
   productsOutOfStockOfExpired,
+  sixMonthsReports
 };
