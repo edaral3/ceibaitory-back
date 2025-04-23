@@ -1,5 +1,5 @@
 import Mongoose from 'mongoose'
-import config from '../config/config'
+import config from '../config/config.js'
 
 const mongoConnection = (): void => {
   Mongoose.Promise = global.Promise

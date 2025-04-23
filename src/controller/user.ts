@@ -5,10 +5,10 @@ import {
   updateItem,
   getOneItem,
   getAllItems
-} from '../common/CRUD/genericCRUD'
-import { getCollection } from '../models'
+} from '../common/CRUD/genericCRUD.js'
+import { getCollection } from '../models/index.js'
 
-import { getClientDetails } from './bill'
+import { getClientDetails } from './bill.js'
 
 const getBillInformation = async (req: any, res: any): Promise<void> => {
   try {

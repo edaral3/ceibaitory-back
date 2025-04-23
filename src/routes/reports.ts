@@ -1,7 +1,7 @@
 import express from 'express'
-import reports from '../controller/reports'
-import { setCollection } from '../middleware/collection'
-import { validateToken } from '../middleware/auth'
+import reports from '../controller/reports.js'
+import { setCollection } from '../middleware/collection.js'
+import { validateToken } from '../middleware/auth.js'
 
 const router = express.Router()
 router.get('/dailyReports', validateToken(['owner']), setCollection('report'), reports.getDayReports)

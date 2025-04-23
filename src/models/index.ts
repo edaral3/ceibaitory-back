@@ -1,14 +1,14 @@
 import Mongoose from 'mongoose'
 
-import client from './client'
-import user from './user'
-import product from './product'
-import supplier from './supplier'
-import credit from './credit'
-import sale from './sale'
-import purchase from './purchase'
-import company from './company'
-import branch from './branch'
+import client from './client.js'
+import user from './user.js'
+import product from './product.js'
+import supplier from './supplier.js'
+import credit from './credit.js'
+import sale from './sale.js'
+import purchase from './purchase.js'
+import company from './company.js'
+import branch from './branch.js'
 
 const models = {
   client,

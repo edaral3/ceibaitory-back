@@ -1,5 +1,5 @@
 import Mongoose, { type ClientSession } from 'mongoose'
-import { generateBill, cancelBill, getClientDetails } from './bill'
+import { generateBill, cancelBill, getClientDetails } from './bill.js'
 
 const updateProduct = async (
   ControllerProduct: any,

@@ -1,4 +1,4 @@
-import { existValueError } from './errors'
+import { existValueError } from './errors.js'
 import bcrypt from 'bcrypt'
 
 const createItem = async (req: any, res: any): Promise<any> => {

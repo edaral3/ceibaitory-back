@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt'
 import CryptoJS from 'crypto-js'
-import config from '../config/config'
+import config from '../config/config.js'
 
 const encriptData = (bodyName: string) => {
   return (req: any, _res: any, next: any) => {

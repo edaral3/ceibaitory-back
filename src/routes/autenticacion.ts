@@ -1,7 +1,7 @@
 import express from 'express'
-import autenticacion from '../controller/autentication'
-import { setCollection } from '../middleware/collection'
-import { validator } from '../middleware/bodyValidator'
+import autenticacion from '../controller/autentication.js'
+import { setCollection } from '../middleware/collection.js'
+import { validator } from '../middleware/bodyValidator.js'
 
 const router = express.Router()
 

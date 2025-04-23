@@ -1,5 +1,5 @@
 import Joi from 'joi'
-import messages from './messageErrors/messagesErrors'
+import messages from './messageErrors/messagesErrors.js'
 import trade from './trade'
 
 const schema = Joi.object({

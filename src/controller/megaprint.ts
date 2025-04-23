@@ -7,11 +7,11 @@ import {
   buildRequestCancellBill,
   buildClientRequest,
   buildCancelBill
-} from '../utils/megaprint/certifier'
+} from '../utils/megaprint/certifier.js'
 
 import {
   getPDF
-} from '../utils/megaprint/templates'
+} from '../utils/megaprint/templates.js'
 
 const getToken = async (credentials: string): Promise<string> => {
   const newToken = await axios.post(

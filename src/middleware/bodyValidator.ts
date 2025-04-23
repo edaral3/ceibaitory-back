@@ -1,4 +1,4 @@
-import schemas from '../schemas/index'
+import schemas from '../schemas/index.js'
 
 const validator = (schemaName: string): any => {
   const schema = schemas[schemaName]

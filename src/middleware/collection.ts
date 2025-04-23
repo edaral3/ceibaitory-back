@@ -1,4 +1,4 @@
-import { getCollection } from '../models'
+import { getCollection } from '../models/index.js'
 
 const setCollection = (collectionName: string) => {
   return (req: any, _res: any, next: any) => {

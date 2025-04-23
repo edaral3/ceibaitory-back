@@ -1,5 +1,5 @@
 import { createClient } from 'redis'
-import config from '../config/config'
+import config from '../config/config.js'
 
 const redisConfig = config.db.redis
 let redisClient: any

@@ -4,7 +4,7 @@ import {
   updateItem,
   getOneItem,
   getAllItems
-} from '../common/CRUD/genericCRUD'
+} from '../common/CRUD/genericCRUD.js'
 
 export default {
   create: createItem,

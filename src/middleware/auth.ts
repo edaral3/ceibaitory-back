@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken'
-import config from '../config/config'
-import { getCollection } from '../models'
+import config from '../config/config.js'
+import { getCollection } from '../models/index.js'
 
 const validateToken = (roles: string[]) => {
   return (req: any, res: any, next: any) => {

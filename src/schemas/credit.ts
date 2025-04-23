@@ -1,6 +1,6 @@
 import trade from './trade'
 import Joi from 'joi'
-import messages from './messageErrors/messagesErrors'
+import messages from './messageErrors/messagesErrors.js'
 
 const schema = Joi.object({
   total: Joi.number()

@@ -1,5 +1,5 @@
 import { Schema } from 'mongoose'
-import trade from './trade'
+import trade from './trade.js'
 
 const getSchema = (company: string): Schema => {
   const payments = new Schema({

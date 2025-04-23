@@ -1,9 +1,9 @@
 import express from 'express'
-import user from '../controller/user'
-import { setCollection } from '../middleware/collection'
-import { validateToken } from '../middleware/auth'
-import { encriptData } from '../middleware/encriptData'
-import { validator } from '../middleware/bodyValidator'
+import user from '../controller/user.js'
+import { setCollection } from '../middleware/collection.js'
+import { validateToken } from '../middleware/auth.js'
+import { encriptData } from '../middleware/encriptData.js'
+import { validator } from '../middleware/bodyValidator.js'
 
 const router = express.Router()
 

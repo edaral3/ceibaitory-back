@@ -1,8 +1,8 @@
 import express from 'express'
-import branch from '../controller/branch'
-import { setCollection } from '../middleware/collection'
-import { validateToken } from '../middleware/auth'
-import { validator } from '../middleware/bodyValidator'
+import branch from '../controller/branch.js'
+import { setCollection } from '../middleware/collection.js'
+import { validateToken } from '../middleware/auth.js'
+import { validator } from '../middleware/bodyValidator.js'
 
 const router = express.Router()
 
