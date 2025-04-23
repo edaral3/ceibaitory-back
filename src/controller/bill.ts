@@ -1,4 +1,4 @@
-import certifiers from '../utils/certifiers'
+import certifiers from '../utils/certifiers.js'
 import CryptoJS from 'crypto-js'
 import config from '../config/config.js'
 import { redisConnection } from '../redisdb/redisConnection.js'
