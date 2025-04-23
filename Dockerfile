@@ -1,4 +1,4 @@
-FROM node:18.12.0
+FROM node:23.11.0-slim
 WORKDIR /app
 COPY . ./
 EXPOSE 3000
