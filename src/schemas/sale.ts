@@ -1,6 +1,6 @@
 import Joi from 'joi'
 import messages from './messageErrors/messagesErrors.js'
-import trade from './trade'
+import trade from './trade.js'
 
 const schema = Joi.object({
   total: Joi.number().allow(0).min(0).required().messages(messages.validationStringMessages),

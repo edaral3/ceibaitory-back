@@ -1,4 +1,4 @@
-import trade from './trade'
+import trade from './trade.js'
 import Joi from 'joi'
 import messages from './messageErrors/messagesErrors.js'
 
