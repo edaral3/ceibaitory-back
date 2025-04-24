@@ -2,6 +2,7 @@ import Mongoose from 'mongoose'
 import config from '../config/config.js'
 
 const mongoConnection = (): void => {
+  console.log('Connecting to MongoDB...', config.db.mongo.host)
   Mongoose.Promise = global.Promise
   Mongoose.set('strictQuery', true)
   Mongoose.connect(config.db.mongo.host||"")
