@@ -7,7 +7,7 @@ import {
   cancelSign,
   registerBill,
   signBill
-} from './templates'
+} from './templates.js'
 
 interface product {
   total: number
