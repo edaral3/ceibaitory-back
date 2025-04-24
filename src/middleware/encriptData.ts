@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt'
+import bcrypt from 'bcryptjs'
 import CryptoJS from 'crypto-js'
 import config from '../config/config.js'
 

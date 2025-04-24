@@ -2,7 +2,8 @@
   "compilerOptions": {
     "moduleResolution": "node",
     "module": "esnext",
-    "target": "esnext",
+    "target": "es2021", // Ensure ES2021 or later
+    "lib": ["es2021", "dom"], // Add "dom" to include DOM types
     "types": ["node"],
     "strictNullChecks": true,
     "esModuleInterop": true,
@@ -10,11 +11,7 @@
     "paths": {
       "@/*": ["./src/*"]
     }
-  },  
-  "ts-node": {
-    "esm": true, 
-    "experimentalSpecifierResolution": "node",
-  }, 
+  },
   "include": ["./src/**/*", "./tests/**/*"],
-  "exclude": ["node_modules"], 
+  "exclude": ["node_modules"]
 }
