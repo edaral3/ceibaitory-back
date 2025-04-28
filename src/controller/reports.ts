@@ -227,45 +227,31 @@ const buildDate = (startDate: string, endDate: string): any => {
   };
 };
 
-const isBtweenDates = (start: string, end: string, between: string) => {
-  const startSplit = start.split("/");
-  const endSplit = end.split("/");
-  const betweenSplit = between.split("/");
-  if (
-    Number(betweenSplit[2]) >= Number(startSplit[2]) &&
-    Number(betweenSplit[2]) <= Number(endSplit[2])
-  ) {
-    if (
-      Number(betweenSplit[0]) >= Number(startSplit[0]) &&
-      Number(betweenSplit[0]) <= Number(endSplit[0])
-    ) {
-      if (
-        Number(betweenSplit[1]) >= Number(startSplit[1]) &&
-        Number(betweenSplit[1]) <= Number(endSplit[1])
-      ) {
-        return true;
-      }
-    }
-  }
-};
-
 const getListSaleRange = async (
   CollectionSale: any,
   startDate: string,
   endDate: string
 ): Promise<any> => {
-  const sales = await CollectionSale.find({ canceled: false });
+
+  const start = new Date(startDate);
+  start.setHours(start.getHours() - 6);
+  const end = new Date(endDate);
+  end.setHours(end.getHours() - 6);
+
+  const sales = await CollectionSale.find({
+    canceled: false,
+    date: { $gte: start, $lte: end }
+  });
+
   const salesAux = [];
   for (const item of sales) {
-    const saleDate = new Date(item.date)
-      .toLocaleString("es-GT", {
-        timeZone: "America/Guatemala",
-      })
-      .split(",")[0];
-    if (isBtweenDates(startDate, endDate, saleDate)) {
+
+      const hour = item.date.toISOString().split("T")[1].split(":")[0];
+    if (hour>= 6 && hour <= 9) {
       salesAux.push(item);
     }
   }
+
 
   return salesAux;
 };
@@ -547,8 +533,8 @@ const getSalesReport = async (req: any, res: any): Promise<void> => {
     const pdf = await createSalesReport(
       req.CollectionSale,
       req.companyName,
-      formatDate(startDate),
-      formatDate(endDate),
+      startDate,
+      endDate,
       typeReport
     );
     res.send({ pdf });
@@ -677,7 +663,6 @@ const productsOutOfStockOfExpired = async (
   res: any
 ): Promise<void> => {
   try {
-    // let products = await req.CollectionProduct.find({branch: req.branch});
     const products = await req.CollectionProduct.find();
 
     const productsOutOfStock = products.filter(

@@ -83,7 +83,10 @@ const cancelPurchase = async (req: any, res: any): Promise<void> => {
 
 const getAllPurchases = async (req: any, res: any): Promise<any> => {
   try {
-    const items = await req.CollectionPurchase.find().sort({ date: -1 }).limit(50);
+    const items = await req.CollectionSale.find()
+      .sort({ date: -1 })
+      .limit(200);
+
     return res.send(items)
   } catch (error) {
     return res.status(500).json({ message: 'Error gettin all purchases' })
