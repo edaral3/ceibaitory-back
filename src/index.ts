@@ -1,8 +1,9 @@
-import { mongoConnection } from './mongodb/mongoConnection'
+// tird-party modules
 import http from 'http'
 import express from 'express'
 import cors from 'cors'
 
+// custom modules
 import sale from './routes/sale'
 import purchase from './routes/purchase'
 import client from './routes/client'
@@ -15,6 +16,7 @@ import credit from './routes/credit'
 import autenticacion from './routes/autenticacion'
 import reports from './routes/reports'
 import root from './routes/root'
+import { mongoConnection } from './mongodb/mongoConnection'
 
 const app = express()
 
