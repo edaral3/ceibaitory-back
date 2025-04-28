@@ -24,9 +24,10 @@ const getCors = (): any => {
   const restrictedCors = {
     origin: [
       'https://ceibaitory.com',
-      'https://ceibaitory.vercel.app'
+      'https://ceibaitory.vercel.app',
+      '*'
     ],
-    methods: ['GET', 'POST', 'DELETE', 'UPDATE', 'PUT'],
+    methods: ['GET', 'POST', 'DELETE', 'UPDATE', 'PUT', '*'],
     headers: ['authorization', 'Content-Type', '*']
   }
 
