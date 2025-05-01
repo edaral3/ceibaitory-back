@@ -243,17 +243,7 @@ const getListSaleRange = async (
     date: { $gte: start, $lte: end }
   });
 
-  const salesAux = [];
-  for (const item of sales) {
-
-      const hour = item.date.toISOString().split("T")[1].split(":")[0];
-    if (hour>= 6 && hour <= 9) {
-      salesAux.push(item);
-    }
-  }
-
-
-  return salesAux;
+  return sales;
 };
 
 const getListSaleMonth = async (
