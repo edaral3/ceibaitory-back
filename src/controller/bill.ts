@@ -1,7 +1,6 @@
 import certifiers from '../utils/certifiers'
 import CryptoJS from 'crypto-js'
 import config from '../config/config'
-import { redisConnection } from '../redisdb/redisConnection'
 import {
   getClientInformationMP,
   generateBillMP,
@@ -10,23 +9,22 @@ import {
   generateTokenMP
 } from './megaprint'
 
+const cache = new Map();
+
 const deleteToken = async (companyName: string): Promise<void> => {
-  const redisClient = await redisConnection()
-  await redisClient.del(`${companyName}_token`)
+  cache.delete(`${companyName}_token`)
 }
 
 const getToken = async (companyName: string, company: any): Promise<string> => {
-  const redisClient = await redisConnection()
-  const exist = await redisClient.exists(`${companyName}_token`)
-  if (!exist) {
-    await setToken(companyName, company)
+  let token = cache.get(`${companyName}_token`);
+  
+  if (!token) {
+    token = await setToken(companyName, company)
   }
-  const token = await redisClient.get(`${companyName}_token`)
   return token
 }
 
 const setToken = async (companyName: string, company: any): Promise<void> => {
-  const redisClient = await redisConnection()
   let token: any
   const bytes = CryptoJS.AES.decrypt(
     company.billingCompanyCredentials,
@@ -38,7 +36,9 @@ const setToken = async (companyName: string, company: any): Promise<void> => {
     case certifiers.MEGAPRINT:
       token = await generateTokenMP(company)
   }
-  await redisClient.set(`${companyName}_token`, token)
+
+  cache.set(`${companyName}_token`, token);
+  await token
 }
 
 const generateBill = async (
