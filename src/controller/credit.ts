@@ -17,7 +17,7 @@ const updateProduct = async (
       if (!data || data.existence - amount < 0) {
         throw {
           type: 400,
-          message: `not enough "${product.name}" to create credit`
+          message: `No hay suficiente "${product.name}" para realizar un credito`
         }
       }
     }
