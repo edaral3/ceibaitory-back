@@ -51,6 +51,10 @@ const getSchema = (company: string): Schema => {
       type: Schema.Types.ObjectId,
       ref: `branch_${company}`,
       default: null
+    },
+    canModifyPrice: {
+      type: Boolean,
+      required: false
     }
   })
   return product
