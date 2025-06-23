@@ -50,7 +50,8 @@ const schema = Joi.object({
     .allow('')
     .messages(messages.validationStringMessages),
   supplier: Joi.string().max(500).allow(null).trim(),
-  branch: Joi.string().max(500).trim()
+  branch: Joi.string().max(500).trim(),
+  canModifyPrice: Joi.boolean()
 })
 
 export default schema
