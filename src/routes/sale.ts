@@ -8,7 +8,7 @@ const router = express.Router()
 
 router.post('/', validateToken(['owner', 'admin', 'vendedor']), validator('sale'), setCollection('sale'), sale.create)
 
-router.delete('/:id', validateToken(['owner', 'admin', 'vendedor']), setCollection('sale'), sale.cancel)
+router.delete('/:id', validateToken(['owner', 'admin' ]), setCollection('sale'), sale.cancel)
 
 router.get('/:id', validateToken(['owner', 'admin', 'vendedor']), setCollection('sale'), sale.getOne)
 

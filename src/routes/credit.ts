@@ -12,7 +12,7 @@ router.put('/pay/:id', validateToken(['owner', 'admin', 'vendedor']), validator(
 
 router.put('/unpaid/:id', validateToken(['owner', 'admin', 'vendedor']), setCollection('credit'), credit.unpaid)
 
-router.delete('/:id', validateToken(['owner', 'admin', 'vendedor']), setCollection('credit'), credit.cancel)
+router.delete('/:id', validateToken(['owner', 'admin']), setCollection('credit'), credit.cancel)
 
 router.get('/:id', validateToken(['owner', 'admin', 'vendedor']), setCollection('credit'), credit.getOne)
 
