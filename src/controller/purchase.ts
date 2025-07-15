@@ -83,7 +83,7 @@ const cancelPurchase = async (req: any, res: any): Promise<void> => {
 
 const getAllPurchases = async (req: any, res: any): Promise<any> => {
   try {
-    const items = await req.CollectionSale.find()
+    const items = await req.CollectionPurchase.find()
       .sort({ date: -1 })
       .limit(200);
 
