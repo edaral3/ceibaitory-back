@@ -7,7 +7,8 @@ const config = {
       host: process.env.DB_MONGO_HOST || ""
     },
   },
-  secret: process.env.SECRET || "" 
+  secret: process.env.SECRET || "",
+  deepseekApiKey: process.env.DEEPSEEK_API_KEY || "",
 }
 
 export default config
