@@ -48,8 +48,6 @@ const createCredit = async (req: any, res: any): Promise<void> => {
           req.body.clientName = billingInformation.name
         } else {
           req.body.clientNit = 'CF'
-          req.body.direction = 'ciudad'
-          req.body.clientName = 'Consumidor final'
         }
         const bill = await generateBill(
           req.CollectionCompany,
