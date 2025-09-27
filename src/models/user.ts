@@ -33,7 +33,12 @@ const getSchema = (company: string): Schema => {
         ref: `branch_${company}`,
         required: false
       }
-    ]
+    ],
+    isFarm: {
+      type: Boolean,
+      required: false,
+      default: false
+  }
   })
 
   user.index({ user: 1 }, { unique: true })

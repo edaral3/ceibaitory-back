@@ -45,6 +45,15 @@ const setCollection = (collectionName: string) => {
         req.CollectionProduct = getCollection('product', companyName)
         req.CollectionSale = getCollection('sale', companyName)
         break
+      case 'farm':
+        req.CollectionShed = getCollection('shed', companyName)
+        req.CollectionConcentrateStore = getCollection('concentrateStore', companyName)
+        req.CollectionBatch = getCollection('batch', companyName)
+        req.CollectionUser = getCollection('user', companyName)
+        req.CollectionConcentrateStoreInfo = getCollection('concentrateStoreInfo', companyName)
+        req.CollectionBatchInfo = getCollection('batchInfo', companyName)
+        req.CollectionChickenSale = getCollection('chickenSale', companyName)
+        break
       default:
         req.CollectionSupplier = getCollection('supplier', companyName)
     }

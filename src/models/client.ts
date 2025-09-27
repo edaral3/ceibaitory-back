@@ -26,7 +26,12 @@ const getSchema = (company: string): Schema => {
       type: Schema.Types.ObjectId,
       ref: `branch_${company}`,
       default: null
-    }
+    },
+    salePrice: {
+      type: Number,
+      required: false,
+      default: 0
+    },
   })
   return client
 }

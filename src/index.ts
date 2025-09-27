@@ -17,6 +17,7 @@ import autenticacion from './routes/autenticacion'
 import reports from './routes/reports'
 import root from './routes/root'
 import chat from './routes/chat'
+import farm from './routes/farm'
 import { mongoConnection } from './mongodb/mongoConnection'
 
 const app = express()
@@ -26,7 +27,7 @@ const getCors = (): any => {
     origin: [
       'https://ceibaitory.com',
       'https://ceibaitory.vercel.app',
-      //'http://localhost:3000',
+      'http://localhost:3000',
     ],
     methods: ['GET', 'POST', 'DELETE', 'UPDATE', 'PUT'],
     headers: ['authorization', 'Content-Type', '*']
@@ -56,6 +57,7 @@ app.use('/credit', credit)
 app.use('/login', autenticacion)
 app.use('/reports', reports)
 app.use('/chat', chat)
+app.use('/farm', farm)
 
 const PORT = process.env.PORT ?? '3000'
 app.set('port', PORT)

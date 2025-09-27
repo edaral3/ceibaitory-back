@@ -9,6 +9,12 @@ import sale from './sale'
 import purchase from './purchase'
 import company from './company'
 import branch from './branch'
+import shed from './shed'
+import batch from './batch'
+import batchInfo from './batch-info'
+import concentrateStore from './concentrate-store'
+import concentrateStoreInfo from './concentrate-store-info'
+import chickenSale from './chicken-sale'
 
 const models = {
   client,
@@ -19,7 +25,13 @@ const models = {
   sale,
   purchase,
   company,
-  branch
+  branch,
+  shed,
+  concentrateStore,
+  batch,
+  batchInfo,
+  concentrateStoreInfo,
+  chickenSale
 }
 
 const getCollection = (collectionName: string, companyName: string): any => {

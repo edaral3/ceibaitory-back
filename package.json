@@ -30,6 +30,7 @@
     "jspdf-invoice-template": "^1.4.3",
     "jspdf-invoice-template-nodejs": "^1.4.30",
     "mongoose": "^6.1.3",
+    "mongoose-sequence": "^6.0.1",
     "newrelic": "^8.6.0",
     "path": "^0.12.7",
     "pug": "^2.0.4",
