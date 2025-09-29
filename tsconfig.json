@@ -13,6 +13,6 @@
     "resolveJsonModule": true,
     "noImplicitAny": false
   },
-  "include": ["src"],
+  "include": ["src", "src/routes/farm.ts", "index.ts"],
   "exclude": ["node_modules", "src//*.spec.ts"]
 }

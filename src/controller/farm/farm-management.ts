@@ -1,6 +1,7 @@
 import Mongoose, { type ClientSession } from 'mongoose'
 import BatchInfoTypeEnum from '../../enum/batch-info-type.enum'
 import ConcentrateStoreInfoEnum from '../../enum/concentrate-store-info.enum'
+import PDFDocument from 'pdfkit';
 
 const makeAnAction = async (req: any, res: any): Promise<void> => {
   const session = await Mongoose.startSession()
@@ -100,11 +101,12 @@ const concentrateStoreAction = async (req: any, batch, session: ClientSession): 
   newPrices = newPrices.filter(price => price > 0)
   newAmounts = newAmounts.filter(amount => amount > 0)
 
-  const newConcentrateStoreInfo = new req.CollectionBatchInfo({ 
-    concentrateStore: batch.concentrateStore, 
-    type: ConcentrateStoreInfoEnum.OUTPUT, 
-    amount: amountsInfo.reduce((a, b) => a + b, 0) , 
-    price: pricesInfo.reduce((a, b) => a + b, 0)/ pricesInfo.length });
+  const newConcentrateStoreInfo = new req.CollectionBatchInfo({
+    concentrateStore: batch.concentrateStore,
+    type: ConcentrateStoreInfoEnum.OUTPUT,
+    amount: amountsInfo.reduce((a, b) => a + b, 0),
+    price: pricesInfo.reduce((a, b) => a + b, 0) / pricesInfo.length
+  });
 
   await newConcentrateStoreInfo.save({ session });
   await req.CollectionConcentrateStore.findByIdAndUpdate(batch.concentrateStore._id, { $set: { amount: newAmounts, price: newPrices } }, { session })
@@ -275,49 +277,191 @@ const updateBatch = async (req: any, res: any): Promise<void> => {
   }
 }
 
-
 const chickenSale = async (req: any, res: any): Promise<void> => {
+  const { chickenBatch, clientId, saleDate } = req.body
+
+  const session = await Mongoose.startSession()
+  session.startTransaction()
+
   try {
-    const { batchId, shedNumber: shedId, startDate, concentrateStore: concentrateStoreId, employees, initialChickenAmount } = req.body
+    const client = await req.CollectionClient.findById(clientId)
 
-    const foundShed = await req.CollectionShed.findById(shedId)
-
-    if (!foundShed) {
-      throw { type: 400, message: 'Shed not found' }
+    if (!client) {
+      throw { type: 400, message: 'Client not found' }
     }
 
-    const foundBatch = await req.CollectionBatch.findById(batchId)
+    const totalChickenAmount = chickenBatch.reduce((acc: number, batch: any) => acc + batch.amount, 0)
+    const totalChickenPound = chickenBatch.reduce((acc: number, batch: any) => acc + batch.pound, 0)
+    const totalSale = totalChickenPound * client.salePrice
 
-    if (!foundBatch) {
-      throw { type: 400, message: 'Batch not found' }
-    }
+    const chickenSale = new req.CollectionChickenSale({ client: clientId, date: saleDate, chickenAmount: totalChickenAmount, weight: totalChickenPound, total: totalSale, averageWeight: totalChickenPound / totalChickenAmount, paid: false });
 
-    if (foundBatch.shed.toString() !== shedId) {
-      const anotherBatch = await req.CollectionBatch.findOne({ shed: foundShed, state: true })
+    await chickenSale.save({ session });
+    for (const batchSale of chickenBatch) {
+      const batch = await req.CollectionBatch.findOne({ shed: batchSale.shed, state: true })
+      const newAction = {
+        batchId: batch._id,
+        action: BatchInfoTypeEnum.SALE,
+        amount: batch.amount,
+        price: batchSale.price,
+        chikenSale: chickenSale._id,
 
-      if (anotherBatch) {
-        throw { type: 400, message: 'Ya hay un lote activo en este galpón' }
       }
+      const newDoc = new req.CollectionBatchInfo(newAction);
+      await newDoc.save({ session });
     }
 
-    const updatedBatch = {
-      shed: foundShed._id,
-      birdType: foundShed.birdType,
-      inCharge: employees,
-      concentrateStore: concentrateStoreId,
-      amount: initialChickenAmount,
-      startDate
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename=ticket-${chickenSale._id}.pdf`);
+
+    const doc = new PDFDocument({ size: [250, 400], margin: 12 }); // small receipt size
+    doc.pipe(res);
+
+    // Header
+    doc.fontSize(14).text("Granja Aldana", { align: 'center' });
+    doc.fontSize(8).text(`Ticket: ${chickenSale._id}`, { align: 'center' });
+    doc.moveDown(1);
+    doc.fontSize(8).text(`Fecha: ${saleDate}`);
+    doc.fontSize(8).text(`Cliente: ${client.name}`);
+
+    doc.moveDown(1.5);
+    doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke();
+
+    // Items
+    doc.moveDown(0.5);
+
+    doc.fontSize(9).text(`Cantidad de pollos`, { continued: true }).text(`${totalChickenAmount}`, { align: 'right' });
+    doc.fontSize(9).text(`Cantidad de libras`, { continued: true }).text(`${totalChickenPound}`, { align: 'right' });
+
+    doc.moveDown(0.5);
+    doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke();
+
+    // Total
+    doc.moveDown(0.5);
+    doc.fontSize(11).text('TOTAL', { continued: true }).text(` Q${totalSale.toFixed(2)}`, { align: 'right' });
+
+    // Footer
+    doc.moveDown(1);
+    doc.fontSize(8).text('Gracias por la compra!', { align: 'center' });
+
+
+    await session.commitTransaction()
+    doc.end();
+  } catch (error: any) {
+    await session.abortTransaction()
+    if (error.type === 400) {
+      res.status(400).json({ message: error.message })
+    } else {
+      res.status(500).json({ message: 'Error updating batch' })
+    }
+  } finally {
+    await session.endSession()
+  }
+}
+
+const getClients = async (req: any, res: any): Promise<void> => {
+  try {
+    const clients = await req.CollectionClient.find()
+
+    res.send(clients)
+  } catch (error) {
+    res.status(400).json({ message: 'Error getting clients' })
+  }
+}
+
+const chickenSales = async (req: any, res: any): Promise<void> => {
+  try {
+    const sales = await req.CollectionChickenSale.find().limit(50).sort({ date: -1 })
+    //const sales = await req.CollectionChickenSale.find().populate('client') corregit bug
+    res.send(sales)
+  } catch (error: any) {
+    if (error.type === 400) {
+      res.status(400).json({ message: error.message })
+    } else {
+      res.status(500).json({ message: 'Error getting sales' })
+    }
+  }
+}
+
+const getChickenBill = async (req: any, res: any): Promise<void> => {
+  const { billId } = req.params
+  try {
+    const chickenSale = await req.CollectionChickenSale.findById(billId)
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename=ticket-${chickenSale._id}.pdf`);
+
+    const doc = new PDFDocument({ size: [250, 400], margin: 12 }); // small receipt size
+    doc.pipe(res);
+
+    // Header
+    doc.fontSize(14).text("Granja Aldana", { align: 'center' });
+    doc.fontSize(8).text(`Ticket: ${chickenSale._id}`, { align: 'center' });
+    doc.moveDown(1);
+    const newDate = new Date(chickenSale.date);
+    doc.fontSize(8).text(`Fecha: ${newDate.toISOString().split('T')[0]}`);
+    doc.fontSize(8).text(`Cliente: ${chickenSale.client?.name}`);
+
+    doc.moveDown(1.5);
+    doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke();
+
+    // Items
+    doc.moveDown(0.5);
+
+    doc.fontSize(9).text(`Cantidad de pollos`, { continued: true }).text(`${chickenSale.totalChickenAmount}`, { align: 'right' });
+    doc.fontSize(9).text(`Cantidad de libras`, { continued: true }).text(`${chickenSale.weight}`, { align: 'right' });
+
+    doc.moveDown(0.5);
+    doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke();
+
+    // Total
+    doc.moveDown(0.5);
+    doc.fontSize(11).text('TOTAL', { continued: true }).text(` Q${chickenSale.total.toFixed(2)}`, { align: 'right' });
+
+    // Footer
+    doc.moveDown(1);
+    doc.fontSize(8).text('Gracias por la compra!', { align: 'center' });
+
+    doc.end();
+  } catch (error: any) {
+    if (error.type === 400) {
+      res.status(400).json({ message: error.message })
+    } else {
+      res.status(500).json({ message: 'Error getting bill' })
+    }
+  }
+}
+
+const updateChickenBillState = async (req: any, res: any): Promise<void> => {
+  const { billId } = req.params
+  try {
+    const chickenSale = await req.CollectionChickenSale.findById(billId)
+
+    if (!chickenSale) {
+      throw { type: 400, message: 'Bill not found' }
     }
 
-    await req.CollectionBatch.findByIdAndUpdate(batchId, updatedBatch)
+    await req.CollectionChickenSale.findByIdAndUpdate(billId, { $set: { paid: true } })
 
     res.send({ message: 'OK' })
   } catch (error: any) {
     if (error.type === 400) {
       res.status(400).json({ message: error.message })
     } else {
-      res.status(500).json({ message: 'Error updating batch' })
+      res.status(500).json({ message: 'Error updating bill' })
     }
+  }
+}
+
+const getBatchInfo = async (req: any, res: any): Promise<void> => {
+  const { batchId } = req.params
+  try {
+    const batchInfo = await req.CollectionBatchInfo.find({ batchId })
+
+    res.send(batchInfo)
+  } catch (error) {
+    res.status(400).json({ message: 'Error getting batch info' })
   }
 }
 
@@ -330,5 +474,10 @@ export default {
   getSheds,
   getStores,
   updateBatch,
-  chickenSale
+  chickenSale,
+  getClients,
+  chickenSales,
+  getChickenBill,
+  updateChickenBillState,
+  getBatchInfo
 }

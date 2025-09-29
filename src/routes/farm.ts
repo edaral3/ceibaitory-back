@@ -18,4 +18,16 @@ router.get('/stores', setCollection('farm'), farmManagement.getStores)
 
 router.put('/batch', setCollection('farm'), farmManagement.updateBatch)
 
+router.get('/clients', setCollection('farm'), farmManagement.getClients)
+
+router.post('/sale-chicken', setCollection('farm'), farmManagement.chickenSale)
+
+router.put('/sale-chicken/:billId', setCollection('farm'), farmManagement.updateChickenBillState)
+
+router.get('/sales-chicken', setCollection('farm'), farmManagement.chickenSales)
+
+router.get('/sale-chicken-bill/:billId', setCollection('farm'), farmManagement.getChickenBill)
+
+router.get('/batch-info/:batchId', setCollection('farm'), farmManagement.getBatchInfo)
+
 export default router
