@@ -749,18 +749,14 @@ const getEggBill = async (req: any, res: any): Promise<void> => {
 const eggSalesBetween = async (req: any, res: any): Promise<void> => {
   try {
     const { startDate, endDate } = req.query
-    console.log(startDate, endDate)
     if (!startDate || !endDate) {
       throw { type: 400, message: 'Start date and end date are required' }
     }
-    console.log(new Date(startDate), new Date(endDate))
     const sales = await req.CollectionEggSale.find({
       date: { $gte: new Date(startDate), $lte: new Date(endDate) }
     })
-    console.log(sales)
     res.send(sales)
   } catch (error: any) {
-    console.log(error)
     if (error.type === 400) {
       res.status(400).json({ message: error.message })
     } else {
