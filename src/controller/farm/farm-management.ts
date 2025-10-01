@@ -2,6 +2,8 @@ import Mongoose, { type ClientSession } from 'mongoose'
 import BatchInfoTypeEnum from '../../enum/batch-info-type.enum'
 import ConcentrateStoreInfoEnum from '../../enum/concentrate-store-info.enum'
 import PDFDocument from 'pdfkit';
+import "pdfkit-table";
+import { Console } from 'console';
 
 const makeAnAction = async (req: any, res: any): Promise<void> => {
   const session = await Mongoose.startSession()
@@ -47,15 +49,6 @@ const makeAnAction = async (req: any, res: any): Promise<void> => {
 const concentrateStoreAction = async (req: any, batch, session: ClientSession): Promise<void> => {
   const { amount } = req.body
 
-  const newAction = {
-    batchId: batch._id,
-    action: BatchInfoTypeEnum.CONCENTRATE,
-    amount,
-  }
-
-  const newDoc = new req.CollectionBatchInfo(newAction);
-  await newDoc.save({ session });
-
   const concentrate = await req.CollectionConcentrateStore.findById(batch.concentrateStore._id)
 
   let newPrices: number[] = []
@@ -95,19 +88,35 @@ const concentrateStoreAction = async (req: any, batch, session: ClientSession): 
   }
 
   if (difference > 0) {
-    throw { type: 400, message: 'Not enough concentrate in store' }
+    throw { type: 400, message: 'No hay suficiente concentrado en la bodega' }
+  }
+
+  let total = 0;
+  for (let i = 0; i < amountsInfo.length; i++) {
+    total += amountsInfo[i] * pricesInfo[i];
   }
 
   newPrices = newPrices.filter(price => price > 0)
   newAmounts = newAmounts.filter(amount => amount > 0)
 
-  const newConcentrateStoreInfo = new req.CollectionBatchInfo({
+  const newAction = {
+    batchId: batch._id,
+    action: BatchInfoTypeEnum.CONCENTRATE,
+    amount,
+    price: total / amountsInfo.reduce((a, b) => a + b, 0)
+  }
+
+  const newDoc = new req.CollectionBatchInfo(newAction);
+  await newDoc.save({ session });
+
+  const body = {
     concentrateStore: batch.concentrateStore,
     type: ConcentrateStoreInfoEnum.OUTPUT,
-    amount: amountsInfo.reduce((a, b) => a + b, 0),
-    price: pricesInfo.reduce((a, b) => a + b, 0) / pricesInfo.length
-  });
+    amount: amountsInfo,
+    price: pricesInfo
+  }
 
+  const newConcentrateStoreInfo = new req.CollectionConcentrateStoreInfo(body);
   await newConcentrateStoreInfo.save({ session });
   await req.CollectionConcentrateStore.findByIdAndUpdate(batch.concentrateStore._id, { $set: { amount: newAmounts, price: newPrices } }, { session })
 
@@ -204,7 +213,16 @@ const createBatch = async (req: any, res: any): Promise<void> => {
 const getActiveBatches = async (req: any, res: any): Promise<void> => {
   try {
     const batches = await req.CollectionBatch.find({ state: true }).populate('shed').populate('inCharge').populate('concentrateStore')
+    res.send(batches)
+  } catch (error) {
+    res.status(400).json({ message: 'Error getting batches' })
+  }
+}
 
+
+const getBatches = async (req: any, res: any): Promise<void> => {
+  try {
+    const batches = await req.CollectionBatch.find().populate('shed').populate('inCharge').populate('concentrateStore')
     res.send(batches)
   } catch (error) {
     res.status(400).json({ message: 'Error getting batches' })
@@ -224,7 +242,6 @@ const getSheds = async (req: any, res: any): Promise<void> => {
 const getStores = async (req: any, res: any): Promise<void> => {
   try {
     const stores = await req.CollectionConcentrateStore.find()
-
     res.send(stores)
   } catch (error) {
     res.status(400).json({ message: 'Error getting stores' })
@@ -302,8 +319,8 @@ const chickenSale = async (req: any, res: any): Promise<void> => {
       const newAction = {
         batchId: batch._id,
         action: BatchInfoTypeEnum.SALE,
-        amount: batch.amount,
-        price: batchSale.price,
+        amount: totalChickenAmount,
+        price: client.salePrice,
         chikenSale: chickenSale._id,
 
       }
@@ -372,8 +389,7 @@ const getClients = async (req: any, res: any): Promise<void> => {
 
 const chickenSales = async (req: any, res: any): Promise<void> => {
   try {
-    const sales = await req.CollectionChickenSale.find().limit(50).sort({ date: -1 })
-    //const sales = await req.CollectionChickenSale.find().populate('client') corregit bug
+    const sales = await req.CollectionChickenSale.find().populate('client').limit(50).sort({ date: -1 })
     res.send(sales)
   } catch (error: any) {
     if (error.type === 400) {
@@ -387,7 +403,7 @@ const chickenSales = async (req: any, res: any): Promise<void> => {
 const getChickenBill = async (req: any, res: any): Promise<void> => {
   const { billId } = req.params
   try {
-    const chickenSale = await req.CollectionChickenSale.findById(billId)
+    const chickenSale = await req.CollectionChickenSale.findById(billId).populate('client')
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename=ticket-${chickenSale._id}.pdf`);
@@ -409,7 +425,7 @@ const getChickenBill = async (req: any, res: any): Promise<void> => {
     // Items
     doc.moveDown(0.5);
 
-    doc.fontSize(9).text(`Cantidad de pollos`, { continued: true }).text(`${chickenSale.totalChickenAmount}`, { align: 'right' });
+    doc.fontSize(9).text(`Cantidad de pollos`, { continued: true }).text(`${chickenSale.chickenAmount}`, { align: 'right' });
     doc.fontSize(9).text(`Cantidad de libras`, { continued: true }).text(`${chickenSale.weight}`, { align: 'right' });
 
     doc.moveDown(0.5);
@@ -457,14 +473,301 @@ const updateChickenBillState = async (req: any, res: any): Promise<void> => {
 const getBatchInfo = async (req: any, res: any): Promise<void> => {
   const { batchId } = req.params
   try {
-    const batchInfo = await req.CollectionBatchInfo.find({ batchId })
-
+    const batchInfo = await req.CollectionBatchInfo.find({ batchId }).populate('chikenSale')
     res.send(batchInfo)
   } catch (error) {
     res.status(400).json({ message: 'Error getting batch info' })
   }
 }
 
+const getUsers = async (req: any, res: any): Promise<void> => {
+  try {
+    const users = await req.CollectionUser.find({ company: req.company }, '-pwd')
+    res.send(users)
+  } catch (error) {
+    res.status(400).json({ message: 'Error getting users' })
+  }
+}
+
+const eggSale = async (req: any, res: any): Promise<void> => {
+  const { data, saleDate } = req.body
+
+  try {
+    const prices = await req.CollectionEggPrice.find()
+
+    const size: number[] = []
+    const type: string[] = []
+    const amount: number[] = []
+    const price: number[] = []
+    const totals: number[] = []
+    let total = 0;
+
+    for (const item of data) {
+      const priceItem = prices.find(pr => pr.type.toLowerCase() === item.size.toLowerCase())
+
+      size.push(item.size)
+      type.push(item.type.toLowerCase())
+      price.push(priceItem.price)
+      amount.push(item.amount)
+
+      if (item.type.toLowerCase() === 'caja') {
+        total += priceItem.price * item.amount
+        totals.push(priceItem.price * item.amount)
+      } else {
+        total += priceItem.price / 12 * item.amount
+        totals.push(priceItem.price / 12 * item.amount)
+      }
+    }
+
+    const eggSale = new req.CollectionEggSale({ size, type, amount, price, total, date: saleDate });
+
+    await eggSale.save();
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename=ticket-${eggSale._id}.pdf`);
+
+    const doc = new PDFDocument({ size: [250, 400], margin: 12 }); // small receipt size
+    doc.pipe(res);
+
+    // Header
+    doc.fontSize(14).text("Granja Aldana", { align: 'center' });
+    doc.fontSize(8).text(`Ticket: ${eggSale._id}`, { align: 'center' });
+    doc.moveDown(1);
+    doc.fontSize(8).text(`Fecha: ${saleDate}`);
+
+
+    doc.moveDown(1.5);
+    doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke();
+
+    // Items
+    doc.moveDown(0.5);
+
+
+    // Table settings
+    const tableTop = 100;
+    const itemHeight = 20;
+    const columnWidth = 45;
+
+    // Headers
+    const headers = ["Tamaño", "Tipo", "Cantidad", "Precio", "Total"];
+
+    // Draw headers
+    headers.forEach((header, i) => {
+      doc
+        .rect(5 + i * columnWidth, tableTop, columnWidth, itemHeight)
+        .stroke()
+        .fontSize(8)
+        .text(header, 5 + i * columnWidth + 10, tableTop + 10);
+    });
+
+    // Example rows
+    const rows: any = [];
+
+    for (const item of data) {
+      const priceItem = prices.find(pr => pr.type.toLowerCase() === item.size.toLowerCase())
+      if (item.type.toLowerCase() === 'caja') {
+        rows.push([`${item.size}`, item.type, `${item.amount}`, `Q${priceItem.price}`, `Q${item.amount * priceItem.price}`])
+      } else {
+        rows.push([`${item.size}`, item.type, `${item.amount}`, `Q${(priceItem.price / 12).toFixed(2)}`, `Q${((item.amount * priceItem.price) / 12).toFixed(2)}`])
+      }
+    }
+
+    rows.push([``, '', '', ``, ``])
+    rows.push([``, '', '', `Total`, `${total.toFixed(2)}`])
+    // Draw rows
+    rows.forEach((row, rowIndex) => {
+      row.forEach((cell, colIndex) => {
+        const x = 5 + colIndex * columnWidth;
+        const y = tableTop + (rowIndex + 1) * itemHeight;
+
+        doc
+          .rect(x, y, columnWidth, itemHeight)
+          .stroke()
+          .fontSize(8)
+          .text(cell, x + 10, y + 10);
+      });
+    });
+
+    doc.end();
+  } catch (error: any) {
+    if (error.type === 400) {
+      res.status(400).json({ message: error.message })
+    } else {
+      res.status(500).json({ message: 'Error updating batch' })
+    }
+  }
+}
+
+const eggSales = async (req: any, res: any): Promise<void> => {
+  try {
+    const sales = await req.CollectionEggSale.find().limit(100).sort({ date: -1 })
+    res.send(sales)
+  } catch (error: any) {
+    if (error.type === 400) {
+      res.status(400).json({ message: error.message })
+    } else {
+      res.status(500).json({ message: 'Error getting sales' })
+    }
+  }
+}
+
+const eggPrice = async (req: any, res: any): Promise<void> => {
+  try {
+    const sales = await req.CollectionEggPrice.find()
+    res.send(sales)
+  } catch (error: any) {
+    if (error.type === 400) {
+      res.status(400).json({ message: error.message })
+    } else {
+      res.status(500).json({ message: 'Error getting sales' })
+    }
+  }
+}
+
+
+const updateEggPrice = async (req: any, res: any): Promise<void> => {
+  try {
+    const { id, price } = req.body
+    const sales = await req.CollectionEggPrice.findByIdAndUpdate(id, { $set: { price: price } }, { new: true })
+    res.send(sales)
+  } catch (error: any) {
+    if (error.type === 400) {
+      res.status(400).json({ message: error.message })
+    } else {
+      res.status(500).json({ message: 'Error getting sales' })
+    }
+  }
+}
+
+const updateEggBillState = async (req: any, res: any): Promise<void> => {
+  const { billId } = req.params
+  try {
+    const eggSale = await req.CollectionEggSale.findById(billId)
+
+    if (!eggSale) {
+      throw { type: 400, message: 'Bill not found' }
+    }
+
+    await req.CollectionEggSale.findByIdAndUpdate(billId, { $set: { paid: true } })
+
+    res.send({ message: 'OK' })
+  } catch (error: any) {
+    if (error.type === 400) {
+      res.status(400).json({ message: error.message })
+    } else {
+      res.status(500).json({ message: 'Error updating bill' })
+    }
+  }
+}
+
+const getEggBill = async (req: any, res: any): Promise<void> => {
+  const { billId } = req.params
+  try {
+    const eggSale = await req.CollectionEggSale.findById(billId)
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename=ticket-${eggSale._id}.pdf`);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename=ticket-${eggSale._id}.pdf`);
+
+    const doc = new PDFDocument({ size: [250, 400], margin: 12 }); // small receipt size
+    doc.pipe(res);
+
+    // Header
+    doc.fontSize(14).text("Granja Aldana", { align: 'center' });
+    doc.fontSize(8).text(`Ticket: ${eggSale._id}`, { align: 'center' });
+    doc.moveDown(1);
+    doc.fontSize(8).text(`Fecha: ${eggSale.date.toISOString().split('T')[0]}`);
+
+    doc.moveDown(1.5);
+    doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke();
+
+    // Items
+    doc.moveDown(0.5);
+
+
+    // Table settings
+    const tableTop = 100;
+    const itemHeight = 20;
+    const columnWidth = 45;
+
+    // Headers
+    const headers = ["Tamaño", "Tipo", "Cantidad", "Precio", "Total"];
+
+    // Draw headers
+    headers.forEach((header, i) => {
+      doc
+        .rect(5 + i * columnWidth, tableTop, columnWidth, itemHeight)
+        .stroke()
+        .fontSize(8)
+        .text(header, 5 + i * columnWidth + 10, tableTop + 10);
+    });
+
+    // Example rows
+    const rows: any = [];
+
+    for (let i = 0; i < eggSale.size.length; i++) {
+      let total = 0;
+      let price = 0;
+      if (eggSale.type[i].toLowerCase() !== 'caja') {
+        price = eggSale.price[i] / 12;
+        total = (eggSale.amount[i] * eggSale.price[i]) / 12;
+      } else {
+        price = eggSale.price[i];
+        total = eggSale.amount[i] * eggSale.price[i];
+      }
+      rows.push([`${eggSale.size[i]}`, eggSale.type[i], `${eggSale.amount[i]}`, `Q${(price).toFixed(2)}`, `Q${(total).toFixed(2)}`])
+    }
+
+    rows.push([``, '', '', ``, ``])
+    rows.push([``, '', '', `Total`, `${eggSale.total.toFixed(2)}`])
+    // Draw rows
+    rows.forEach((row, rowIndex) => {
+      row.forEach((cell, colIndex) => {
+        const x = 5 + colIndex * columnWidth;
+        const y = tableTop + (rowIndex + 1) * itemHeight;
+
+        doc
+          .rect(x, y, columnWidth, itemHeight)
+          .stroke()
+          .fontSize(8)
+          .text(cell, x + 10, y + 10);
+      });
+    });
+
+    doc.end();
+  } catch (error: any) {
+    if (error.type === 400) {
+      res.status(400).json({ message: error.message })
+    } else {
+      res.status(500).json({ message: 'Error getting bill' })
+    }
+  }
+}
+
+const eggSalesBetween = async (req: any, res: any): Promise<void> => {
+  try {
+    const { startDate, endDate } = req.query
+    console.log(startDate, endDate)
+    if (!startDate || !endDate) {
+      throw { type: 400, message: 'Start date and end date are required' }
+    }
+    console.log(new Date(startDate), new Date(endDate))
+    const sales = await req.CollectionEggSale.find({
+      date: { $gte: new Date(startDate), $lte: new Date(endDate) }
+    })
+    console.log(sales)
+    res.send(sales)
+  } catch (error: any) {
+    console.log(error)
+    if (error.type === 400) {
+      res.status(400).json({ message: error.message })
+    } else {
+      res.status(500).json({ message: 'Error getting sales' })
+    }
+  }
+}
 
 export default {
   makeAnAction,
@@ -479,5 +782,14 @@ export default {
   chickenSales,
   getChickenBill,
   updateChickenBillState,
-  getBatchInfo
+  getBatchInfo,
+  getUsers,
+  eggSale,
+  eggSales,
+  eggPrice,
+  updateEggPrice,
+  updateEggBillState,
+  getEggBill,
+  getBatches,
+  eggSalesBetween
 }

@@ -13,7 +13,8 @@ const setCollection = (collectionName: string) => {
     }
     req.collectionName = collectionName === "userOwner" ? "user" : collectionName
 
-    if (collectionName !== 'report' && companyName) { req.CollectionCrud = getCollection(req.collectionName, companyName) }
+    if (collectionName !== 'report' && collectionName !== 'farm'&& companyName)
+      req.CollectionCrud = getCollection(req.collectionName, companyName)
     switch (collectionName) {
       case 'userOwner':
           req.CollectionCompany = getCollection('company', '')
@@ -49,11 +50,13 @@ const setCollection = (collectionName: string) => {
         req.CollectionShed = getCollection('shed', companyName)
         req.CollectionConcentrateStore = getCollection('concentrateStore', companyName)
         req.CollectionBatch = getCollection('batch', companyName)
-        req.CollectionUser = getCollection('user', companyName)
+        req.CollectionUser = getCollection('user', '')
         req.CollectionConcentrateStoreInfo = getCollection('concentrateStoreInfo', companyName)
         req.CollectionBatchInfo = getCollection('batchInfo', companyName)
         req.CollectionChickenSale = getCollection('chickenSale', companyName)
-        req.CollectionClient = getCollection('client', 'granja-aldanas')
+        req.CollectionClient = getCollection('client', companyName)
+        req.CollectionEggSale = getCollection('eggSale', companyName)
+        req.CollectionEggPrice = getCollection('eggPrice', companyName)
         break
       default:
         req.CollectionSupplier = getCollection('supplier', companyName)

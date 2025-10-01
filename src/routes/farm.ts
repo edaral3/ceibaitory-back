@@ -1,33 +1,53 @@
 import express from 'express'
 import farmManagement from '../controller/farm/farm-management'
 import { setCollection } from '../middleware/collection'
+import { autenticacion } from '../middleware/autenticacion'
 
 const router = express.Router()
 
-router.post('/action', setCollection('farm'), farmManagement.makeAnAction)
+router.get('/users', autenticacion(['owner']), setCollection('farm'), farmManagement.getUsers)
 
-router.post('/addConcentrate', setCollection('farm'), farmManagement.addConcentrate)
+router.post('/action', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.makeAnAction)
 
-router.post('/batch', setCollection('farm'), farmManagement.createBatch)
+router.post('/addConcentrate', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.addConcentrate)
 
-router.get('/activeBatches', setCollection('farm'), farmManagement.getActiveBatches)
+router.post('/batch', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.createBatch)
 
-router.get('/sheds', setCollection('farm'), farmManagement.getSheds)
+router.get('/activeBatches', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.getActiveBatches)
 
-router.get('/stores', setCollection('farm'), farmManagement.getStores)
+router.get('/batches', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.getBatches)
 
-router.put('/batch', setCollection('farm'), farmManagement.updateBatch)
+router.get('/sheds', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.getSheds)
 
-router.get('/clients', setCollection('farm'), farmManagement.getClients)
+router.get('/sales-egg-between', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.eggSalesBetween)
 
-router.post('/sale-chicken', setCollection('farm'), farmManagement.chickenSale)
+router.get('/stores', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.getStores)
 
-router.put('/sale-chicken/:billId', setCollection('farm'), farmManagement.updateChickenBillState)
+router.put('/batch', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.updateBatch)
 
-router.get('/sales-chicken', setCollection('farm'), farmManagement.chickenSales)
+router.get('/clients', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.getClients)
 
-router.get('/sale-chicken-bill/:billId', setCollection('farm'), farmManagement.getChickenBill)
+router.post('/sale-chicken', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.chickenSale)
 
-router.get('/batch-info/:batchId', setCollection('farm'), farmManagement.getBatchInfo)
+router.put('/sale-chicken/:billId', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.updateChickenBillState)
+
+router.get('/sales-chicken', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.chickenSales)
+
+router.get('/sale-chicken-bill/:billId', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.getChickenBill)
+
+router.get('/batch-info/:batchId', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.getBatchInfo)
+
+router.post('/sale-egg', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.eggSale)
+
+router.get('/sales-egg', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.eggSales)
+
+router.put('/update-egg-price', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.updateEggPrice)
+
+router.put('/sale-egg/:billId', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.updateEggBillState)
+
+router.get('/sale-egg-bill/:billId', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.getEggBill)
+
+router.get('/egg-price', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.eggPrice)
+
 
 export default router

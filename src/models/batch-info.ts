@@ -1,7 +1,6 @@
 import { Schema } from 'mongoose'
 import mongoose from 'mongoose'
 import mongooseSequence from 'mongoose-sequence'
-import BatchInfoTypeEnum from '../enum/batch-info-type.enum';
 
 const AutoIncrement = mongooseSequence(mongoose);
 
@@ -14,7 +13,7 @@ const getSchema = (company: string): Schema => {
         },        
         chikenSale: {
             type: Schema.Types.ObjectId,
-            ref: `chikenSale_${company}`,
+            ref: `chickenSale_${company}`,
             default: null
         },
         batchInfoId: {

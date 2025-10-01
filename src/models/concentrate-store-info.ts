@@ -1,9 +1,6 @@
 import { Schema } from 'mongoose'
-import mongoose from 'mongoose'
-import mongooseSequence from 'mongoose-sequence'
 import ConcentrateStoreInfoEnum from '../enum/concentrate-store-info.enum';
 
-const AutoIncrement = mongooseSequence(mongoose);
 
 const getSchema = (company: string): Schema => {
   const store = new Schema({

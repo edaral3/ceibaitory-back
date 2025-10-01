@@ -15,6 +15,8 @@ import batchInfo from './batch-info'
 import concentrateStore from './concentrate-store'
 import concentrateStoreInfo from './concentrate-store-info'
 import chickenSale from './chicken-sale'
+import eggSale from './egg-sale'
+import eggPrice from './egg-price'
 
 const models = {
   client,
@@ -31,7 +33,9 @@ const models = {
   batch,
   batchInfo,
   concentrateStoreInfo,
-  chickenSale
+  chickenSale,
+  eggSale,
+  eggPrice
 }
 
 const getCollection = (collectionName: string, companyName: string): any => {

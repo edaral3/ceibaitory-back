@@ -1,7 +1,6 @@
 import { Schema } from 'mongoose'
 import mongoose from 'mongoose'
 import mongooseSequence from 'mongoose-sequence'
-import { start } from 'repl';
 import BirdTypeEnum from '../enum/bird-type.enum';
 
 const AutoIncrement = mongooseSequence(mongoose);

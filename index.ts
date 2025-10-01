@@ -30,7 +30,7 @@ const getCors = (): any => {
       'http://localhost:3000',
     ],
     methods: ['GET', 'POST', 'DELETE', 'UPDATE', 'PUT'],
-    headers: ['authorization', 'Content-Type', '*']
+    headers: ['authorization', 'Content-Type', 'user', 'pwd', '*'],
   }
 
   return restrictedCors

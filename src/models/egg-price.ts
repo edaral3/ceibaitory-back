@@ -1,23 +1,18 @@
 import { Schema } from 'mongoose'
 
 const getSchema = (): Schema => {
-  const store = new Schema({
-
-    amount: {
-      type: [Number],
+  const sale = new Schema({
+    type: {
+      type: String,
       required: true
     },
     price: {
-      type: [Number],
-      required: true
-    },
-    owner: {
-      type: String,
+      type: Number,
       required: true
     }
   })
 
-  return store
+  return sale
 }
 
 export default getSchema
