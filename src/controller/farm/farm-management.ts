@@ -3,7 +3,6 @@ import BatchInfoTypeEnum from '../../enum/batch-info-type.enum'
 import ConcentrateStoreInfoEnum from '../../enum/concentrate-store-info.enum'
 import PDFDocument from 'pdfkit';
 import "pdfkit-table";
-import { Console } from 'console';
 
 const makeAnAction = async (req: any, res: any): Promise<void> => {
   const session = await Mongoose.startSession()
@@ -250,22 +249,15 @@ const getStores = async (req: any, res: any): Promise<void> => {
 
 const updateBatch = async (req: any, res: any): Promise<void> => {
   try {
-    const { batchId, shedNumber: shedId, startDate, concentrateStore: concentrateStoreId, employees, initialChickenAmount, state } = req.body
-
-    const foundShed = await req.CollectionShed.findById(shedId)
-
-    if (!foundShed) {
-      throw { type: 400, message: 'Shed not found' }
-    }
+    const { batchId, shed, startDate, concentrateStore: concentrateStoreId, employees, initialChickenAmount, state } = req.body
 
     const foundBatch = await req.CollectionBatch.findById(batchId)
-
     if (!foundBatch) {
       throw { type: 400, message: 'Batch not found' }
     }
 
-    if (foundBatch.shed.toString() !== shedId) {
-      const anotherBatch = await req.CollectionBatch.findOne({ shed: foundShed, state: true })
+    if (foundBatch.shed.toString() !== shed._id.toString()) {
+      const anotherBatch = await req.CollectionBatch.findOne({ shed: shed._id, state: true })
 
       if (anotherBatch) {
         throw { type: 400, message: 'Ya hay un lote activo en este galpón' }
@@ -273,8 +265,8 @@ const updateBatch = async (req: any, res: any): Promise<void> => {
     }
 
     const updatedBatch = {
-      shed: foundShed._id,
-      birdType: foundShed.birdType,
+      shed: shed._id,
+      birdType: shed.birdType,
       inCharge: employees,
       concentrateStore: concentrateStoreId,
       amount: initialChickenAmount,
