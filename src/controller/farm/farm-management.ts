@@ -328,11 +328,13 @@ const chickenSale = async (req: any, res: any): Promise<void> => {
     doc.pipe(res);
 
     // Header
-    doc.fontSize(14).text("Granja Aldana", { align: 'center' });
-    doc.fontSize(8).text(`Ticket: ${chickenSale._id}`, { align: 'center' });
+    doc.fontSize(20).text("Granja Aldana", { align: 'center' });
+    doc.moveDown(0.5);
+
+    doc.fontSize(17).text(`Ticket: ${chickenSale._id}`, { align: 'center' });
     doc.moveDown(1);
-    doc.fontSize(8).text(`Fecha: ${saleDate}`);
-    doc.fontSize(8).text(`Cliente: ${client.name}`);
+    doc.fontSize(17).text(`Fecha: ${saleDate}`);
+    doc.fontSize(17).text(`Cliente: ${client.name}`);
 
     doc.moveDown(1.5);
     doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke();
@@ -340,19 +342,19 @@ const chickenSale = async (req: any, res: any): Promise<void> => {
     // Items
     doc.moveDown(0.5);
 
-    doc.fontSize(9).text(`Cantidad de pollos`, { continued: true }).text(`${totalChickenAmount}`, { align: 'right' });
-    doc.fontSize(9).text(`Cantidad de libras`, { continued: true }).text(`${totalChickenPound}`, { align: 'right' });
+    doc.fontSize(17).text(`Cantidad de pollos`, { continued: true }).text(`${totalChickenAmount}`, { align: 'right' });
+    doc.fontSize(17).text(`Cantidad de libras`, { continued: true }).text(`${totalChickenPound}`, { align: 'right' });
 
     doc.moveDown(0.5);
     doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke();
 
     // Total
     doc.moveDown(0.5);
-    doc.fontSize(11).text('TOTAL', { continued: true }).text(` Q${totalSale.toFixed(2)}`, { align: 'right' });
+    doc.fontSize(19).text('TOTAL', { continued: true }).text(` Q${totalSale.toFixed(2)}`, { align: 'right' });
 
     // Footer
     doc.moveDown(1);
-    doc.fontSize(8).text('Gracias por la compra!', { align: 'center' });
+    doc.fontSize(17).text('Gracias por la compra!', { align: 'center' });
 
 
     await session.commitTransaction()
@@ -404,12 +406,14 @@ const getChickenBill = async (req: any, res: any): Promise<void> => {
     doc.pipe(res);
 
     // Header
-    doc.fontSize(14).text("Granja Aldana", { align: 'center' });
-    doc.fontSize(8).text(`Ticket: ${chickenSale._id}`, { align: 'center' });
+    doc.fontSize(20).text("Granja Aldana", { align: 'center' });
+    doc.moveDown(0.5);
+
+    doc.fontSize(17).text(`Ticket: ${chickenSale._id}`, { align: 'center' });
     doc.moveDown(1);
     const newDate = new Date(chickenSale.date);
-    doc.fontSize(8).text(`Fecha: ${newDate.toISOString().split('T')[0]}`);
-    doc.fontSize(8).text(`Cliente: ${chickenSale.client?.name}`);
+    doc.fontSize(17).text(`Fecha: ${newDate.toISOString().split('T')[0]}`);
+    doc.fontSize(17).text(`Cliente: ${chickenSale.client?.name}`);
 
     doc.moveDown(1.5);
     doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke();
@@ -417,19 +421,19 @@ const getChickenBill = async (req: any, res: any): Promise<void> => {
     // Items
     doc.moveDown(0.5);
 
-    doc.fontSize(9).text(`Cantidad de pollos`, { continued: true }).text(`${chickenSale.chickenAmount}`, { align: 'right' });
-    doc.fontSize(9).text(`Cantidad de libras`, { continued: true }).text(`${chickenSale.weight}`, { align: 'right' });
+    doc.fontSize(17).text(`Cantidad de pollos`, { continued: true }).text(`${chickenSale.chickenAmount}`, { align: 'right' });
+    doc.fontSize(17).text(`Cantidad de libras`, { continued: true }).text(`${chickenSale.weight}`, { align: 'right' });
 
     doc.moveDown(0.5);
     doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke();
 
     // Total
     doc.moveDown(0.5);
-    doc.fontSize(11).text('TOTAL', { continued: true }).text(` Q${chickenSale.total.toFixed(2)}`, { align: 'right' });
+    doc.fontSize(19).text('TOTAL', { continued: true }).text(` Q${chickenSale.total.toFixed(2)}`, { align: 'right' });
 
     // Footer
     doc.moveDown(1);
-    doc.fontSize(8).text('Gracias por la compra!', { align: 'center' });
+    doc.fontSize(17).text('Gracias por la compra!', { align: 'center' });
 
     doc.end();
   } catch (error: any) {
@@ -522,61 +526,109 @@ const eggSale = async (req: any, res: any): Promise<void> => {
     doc.pipe(res);
 
     // Header
-    doc.fontSize(14).text("Granja Aldana", { align: 'center' });
-    doc.fontSize(8).text(`Ticket: ${eggSale._id}`, { align: 'center' });
-    doc.moveDown(1);
-    doc.fontSize(8).text(`Fecha: ${saleDate}`);
-
-
-    doc.moveDown(1.5);
-    doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke();
-
-    // Items
+    doc.fontSize(20).text("Granja Aldana", { align: 'center' });
     doc.moveDown(0.5);
+
+    doc.fontSize(17).text(`Ticket: ${eggSale._id}`, { align: 'center' });
+    doc.moveDown(1);
+    doc.fontSize(17).text(`Fecha: ${saleDate}`);
+
+    doc.moveDown(0.1);
+    doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke();
 
 
     // Table settings
-    const tableTop = 100;
+    const tableTop = 140;
     const itemHeight = 20;
-    const columnWidth = 45;
-
-    // Headers
-    const headers = ["Tamaño", "Tipo", "Cantidad", "Precio", "Total"];
 
     // Draw headers
-    headers.forEach((header, i) => {
-      doc
-        .rect(5 + i * columnWidth, tableTop, columnWidth, itemHeight)
-        .stroke()
-        .fontSize(8)
-        .text(header, 5 + i * columnWidth + 10, tableTop + 10);
-    });
+    doc.rect(5, tableTop, 45, itemHeight)
+      .stroke()
+      .font('Helvetica-Bold')   // <- set font to bold
+      .fontSize(12)
+      .text('Tam', 15, tableTop + 5);
+
+    doc.rect(50, tableTop, 30, itemHeight)
+      .stroke()
+      .font('Helvetica-Bold')   // <- set font to bold
+      .fontSize(12)
+      .text('Tipo', 53, tableTop + 5);
+
+    doc.rect(80, tableTop, 30, itemHeight)
+      .stroke()
+      .font('Helvetica-Bold')   // <- set font to bold
+      .fontSize(12)
+      .text('Cant', 82, tableTop + 5);
+
+    doc.rect(110, tableTop, 50, itemHeight)
+      .stroke()
+      .font('Helvetica-Bold')   // <- set font to bold
+      .fontSize(12)
+      .text('Precio', 118, tableTop + 5);
+
+
+    doc.rect(160, tableTop, 85, itemHeight)
+      .stroke()
+      .font('Helvetica-Bold')   // <- set font to bold
+      .fontSize(12)
+      .text('Total', 195, tableTop + 5);
 
     // Example rows
     const rows: any = [];
 
     for (const item of data) {
       const priceItem = prices.find(pr => pr.type.toLowerCase() === item.size.toLowerCase())
+      let size = item.size
+
+      if (size.toLowerCase() === 'pequeño') {
+        size = 'Peq'
+      }
+      else if (size.toLowerCase() === 'mediano') {
+        size = 'Med'
+      }
+      else if (size.toLowerCase() === 'grande') {
+        size = 'Grd'
+      }
+      else if (size.toLowerCase() === 'jumbo') {
+        size = 'Jmb'
+      }
       if (item.type.toLowerCase() === 'caja') {
-        rows.push([`${item.size}`, item.type, `${item.amount}`, `Q${priceItem.price}`, `Q${item.amount * priceItem.price}`])
+        rows.push([size, 'Cja', `${item.amount}`, `${priceItem.price}`, `${item.amount * priceItem.price}`])
       } else {
-        rows.push([`${item.size}`, item.type, `${item.amount}`, `Q${(priceItem.price / 12).toFixed(2)}`, `Q${((item.amount * priceItem.price) / 12).toFixed(2)}`])
+        rows.push([size, 'Crt', `${item.amount}`, `${(priceItem.price / 12).toFixed(2)}`, `${((item.amount * priceItem.price) / 12).toFixed(2)}`])
       }
     }
 
     rows.push([``, '', '', ``, ``])
     rows.push([``, '', '', `Total`, `${total.toFixed(2)}`])
+
     // Draw rows
     rows.forEach((row, rowIndex) => {
       row.forEach((cell, colIndex) => {
-        const x = 5 + colIndex * columnWidth;
+        let x = 0;
         const y = tableTop + (rowIndex + 1) * itemHeight;
-
+        let width = 0;
+        if (colIndex === 0) {
+          x = 5;
+          width = 45;
+        } else if (colIndex === 1) {
+          x = 50;
+          width = 30;
+        } else if (colIndex === 2) {
+          x = 80;
+          width = 30;
+        } else if (colIndex === 3) {
+          x = 110;
+          width = 50;
+        } else if (colIndex === 4) {
+          x = 160;
+          width = 85;
+        }
         doc
-          .rect(x, y, columnWidth, itemHeight)
+          .rect(x, y, width, itemHeight)
           .stroke()
-          .fontSize(8)
-          .text(cell, x + 10, y + 10);
+          .fontSize(14)
+          .text(cell, x + 5, y + 5);
       });
     });
 
@@ -660,41 +712,55 @@ const getEggBill = async (req: any, res: any): Promise<void> => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename=ticket-${eggSale._id}.pdf`);
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename=ticket-${eggSale._id}.pdf`);
-
-    const doc = new PDFDocument({ size: [250, 400], margin: 12 }); // small receipt size
+    const doc = new PDFDocument({ size: [250, 450], margin: 12 }); // small receipt size
     doc.pipe(res);
 
     // Header
-    doc.fontSize(14).text("Granja Aldana", { align: 'center' });
-    doc.fontSize(8).text(`Ticket: ${eggSale._id}`, { align: 'center' });
-    doc.moveDown(1);
-    doc.fontSize(8).text(`Fecha: ${eggSale.date.toISOString().split('T')[0]}`);
-
-    doc.moveDown(1.5);
-    doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke();
-
-    // Items
+    doc.fontSize(20).text("Granja Aldana", { align: 'center' });
     doc.moveDown(0.5);
+
+    doc.fontSize(17).text(`Ticket: ${eggSale._id}`, { align: 'center' });
+    doc.moveDown(1);
+    doc.fontSize(17).text(`Fecha: ${eggSale.date.toISOString().split('T')[0]}`);
+
+    doc.moveDown(0.1);
+    doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke();
 
 
     // Table settings
-    const tableTop = 100;
+    const tableTop = 140;
     const itemHeight = 20;
-    const columnWidth = 45;
-
-    // Headers
-    const headers = ["Tamaño", "Tipo", "Cantidad", "Precio", "Total"];
 
     // Draw headers
-    headers.forEach((header, i) => {
-      doc
-        .rect(5 + i * columnWidth, tableTop, columnWidth, itemHeight)
-        .stroke()
-        .fontSize(8)
-        .text(header, 5 + i * columnWidth + 10, tableTop + 10);
-    });
+    doc.rect(5, tableTop, 45, itemHeight)
+      .stroke()
+      .font('Helvetica-Bold')   // <- set font to bold
+      .fontSize(12)
+      .text('Tam', 15, tableTop + 5);
+
+    doc.rect(50, tableTop, 30, itemHeight)
+      .stroke()
+      .font('Helvetica-Bold')   // <- set font to bold
+      .fontSize(12)
+      .text('Tipo', 53, tableTop + 5);
+
+    doc.rect(80, tableTop, 30, itemHeight)
+      .stroke()
+      .font('Helvetica-Bold')   // <- set font to bold
+      .fontSize(12)
+      .text('Cant', 82, tableTop + 5);
+
+    doc.rect(110, tableTop, 50, itemHeight)
+      .stroke()
+      .font('Helvetica-Bold')   // <- set font to bold
+      .fontSize(12)
+      .text('Precio', 118, tableTop + 5);
+
+    doc.rect(160, tableTop, 85, itemHeight)
+      .stroke()
+      .font('Helvetica-Bold')   // <- set font to bold
+      .fontSize(12)
+      .text('Total', 195, tableTop + 5);
 
     // Example rows
     const rows: any = [];
@@ -709,24 +775,65 @@ const getEggBill = async (req: any, res: any): Promise<void> => {
         price = eggSale.price[i];
         total = eggSale.amount[i] * eggSale.price[i];
       }
-      rows.push([`${eggSale.size[i]}`, eggSale.type[i], `${eggSale.amount[i]}`, `Q${(price).toFixed(2)}`, `Q${(total).toFixed(2)}`])
+      let size = eggSale.size[i]
+
+      if (size.toLowerCase() === 'pequeño') {
+        size = 'Peq'
+      }
+      else if (size.toLowerCase() === 'mediano') {
+        size = 'Med'
+      }
+      else if (size.toLowerCase() === 'grande') {
+        size = 'Grd'
+      }
+      else if (size.toLowerCase() === 'jumbo') {
+        size = 'Jmb'
+      }
+
+      let type = eggSale.type[i]
+      if (type.toLowerCase() === 'caja') {
+        type = 'Cja'
+      }
+      else if (type.toLowerCase() === 'carton') {
+        type = 'Crt'
+      }
+
+      rows.push([size, type, `${eggSale.amount[i]}`, `${(price).toFixed(2)}`, `${(total).toFixed(2)}`])
     }
 
     rows.push([``, '', '', ``, ``])
     rows.push([``, '', '', `Total`, `${eggSale.total.toFixed(2)}`])
+
     // Draw rows
     rows.forEach((row, rowIndex) => {
       row.forEach((cell, colIndex) => {
-        const x = 5 + colIndex * columnWidth;
+        let x = 0;
         const y = tableTop + (rowIndex + 1) * itemHeight;
-
+        let width = 0;
+        if (colIndex === 0) {
+          x = 5;
+          width = 45;
+        } else if (colIndex === 1) {
+          x = 50;
+          width = 30;
+        } else if (colIndex === 2) {
+          x = 80;
+          width = 30;
+        } else if (colIndex === 3) {
+          x = 110;
+          width = 50;
+        } else if (colIndex === 4) {
+          x = 160;
+          width = 85;
+        }
         doc
-          .rect(x, y, columnWidth, itemHeight)
+          .rect(x, y, width, itemHeight)
           .stroke()
-          .fontSize(8)
-          .text(cell, x + 10, y + 10);
+          .fontSize(14)
+          .text(cell, x + 5, y + 5);
       });
     });
+
 
     doc.end();
   } catch (error: any) {
