@@ -49,5 +49,7 @@ router.get('/sale-egg-bill/:billId', autenticacion(['owner', 'worker']), setColl
 
 router.get('/egg-price', autenticacion(['owner', 'worker']), setCollection('farm'), farmManagement.eggPrice)
 
+router.put('/update-client-price', autenticacion(['owner']), setCollection('farm'), farmManagement.updateClientPrice)
+
 
 export default router

@@ -864,6 +864,20 @@ const eggSalesBetween = async (req: any, res: any): Promise<void> => {
   }
 }
 
+const updateClientPrice = async (req: any, res: any): Promise<void> => {
+  try {
+    const { id, price } = req.body
+    const sales = await req.CollectionClient.findByIdAndUpdate(id, { $set: { salePrice: price } }, { new: true })
+    res.send(sales)
+  } catch (error: any) {
+    if (error.type === 400) {
+      res.status(400).json({ message: error.message })
+    } else {
+      res.status(500).json({ message: 'Error getting sales' })
+    }
+  }
+}
+
 export default {
   makeAnAction,
   addConcentrate,
@@ -886,5 +900,6 @@ export default {
   updateEggBillState,
   getEggBill,
   getBatches,
-  eggSalesBetween
+  eggSalesBetween,
+  updateClientPrice
 }
