@@ -92,8 +92,8 @@ const concentrateStoreAction = async (req: any, batch, session: ClientSession): 
       newTypes.push(concentrate.type[i])
     }
   }
-
-  if (difference > 0 && !discountedAll) {
+  
+  if (difference > 0) {
     throw { type: 400, message: 'No hay suficiente concentrado en la bodega' }
   }
 
