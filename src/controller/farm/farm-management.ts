@@ -16,7 +16,6 @@ const makeAnAction = async (req: any, res: any): Promise<void> => {
       throw { type: 400, message: 'Batch not found' }
     }
 
-
     switch (action) {
       case BatchInfoTypeEnum.CONCENTRATE:
         await concentrateStoreAction(req, foundBatch, session)
@@ -46,47 +45,56 @@ const makeAnAction = async (req: any, res: any): Promise<void> => {
 }
 
 const concentrateStoreAction = async (req: any, batch, session: ClientSession): Promise<void> => {
-  const { amount } = req.body
+  const { amount, type } = req.body
 
   const concentrate = await req.CollectionConcentrateStore.findById(batch.concentrateStore._id)
 
   let newPrices: number[] = []
   let newAmounts: number[] = []
+  let newTypes: string[] = []
   let difference = amount;
 
   let pricesInfo: number[] = []
   let amountsInfo: number[] = []
+  let typesInfo: string[] = []
 
   let discountedAll = false
-
 
   for (let i = 0; i < concentrate.price.length; i++) {
     if (discountedAll) {
       newPrices.push(concentrate.price[i])
       newAmounts.push(concentrate.amount[i])
+      newTypes.push(concentrate.type[i])
       continue
     }
-    difference = concentrate.amount[i] - difference
-    if (difference < 0) {
-      pricesInfo.push(concentrate.price[i])
-      amountsInfo.push(concentrate.amount[i])
-      newAmounts.push(0)
-      newPrices.push(0)
-      difference = Math.abs(difference)
-    } else {
-      if (difference !== 0) {
+    if (concentrate.type[i] === type) {
+      difference = concentrate.amount[i] - difference
+      if (difference < 0) {
         pricesInfo.push(concentrate.price[i])
-        amountsInfo.push(concentrate.amount[i] - difference)
-      }
+        amountsInfo.push(concentrate.amount[i])
+        typesInfo.push(concentrate.type[i])
 
-      newAmounts.push(difference)
+        difference = Math.abs(difference)
+      } else {
+        if (difference !== 0) {
+          pricesInfo.push(concentrate.price[i])
+          amountsInfo.push(concentrate.amount[i] - difference)
+          typesInfo.push(concentrate.type[i])
+        }
+        newAmounts.push(difference)
+        newPrices.push(concentrate.price[i])
+        newTypes.push(concentrate.type[i])
+        discountedAll = true
+        difference = 0
+      }
+    } else {
       newPrices.push(concentrate.price[i])
-      discountedAll = true
-      difference = 0
+      newAmounts.push(concentrate.amount[i])
+      newTypes.push(concentrate.type[i])
     }
   }
 
-  if (difference > 0) {
+  if (difference > 0 && !discountedAll) {
     throw { type: 400, message: 'No hay suficiente concentrado en la bodega' }
   }
 
@@ -94,9 +102,6 @@ const concentrateStoreAction = async (req: any, batch, session: ClientSession): 
   for (let i = 0; i < amountsInfo.length; i++) {
     total += amountsInfo[i] * pricesInfo[i];
   }
-
-  newPrices = newPrices.filter(price => price > 0)
-  newAmounts = newAmounts.filter(amount => amount > 0)
 
   const newAction = {
     batchId: batch._id,
@@ -112,12 +117,13 @@ const concentrateStoreAction = async (req: any, batch, session: ClientSession): 
     concentrateStore: batch.concentrateStore,
     type: ConcentrateStoreInfoEnum.OUTPUT,
     amount: amountsInfo,
-    price: pricesInfo
+    price: pricesInfo,
+    typeConcentrate: typesInfo
   }
 
   const newConcentrateStoreInfo = new req.CollectionConcentrateStoreInfo(body);
   await newConcentrateStoreInfo.save({ session });
-  await req.CollectionConcentrateStore.findByIdAndUpdate(batch.concentrateStore._id, { $set: { amount: newAmounts, price: newPrices } }, { session })
+  await req.CollectionConcentrateStore.findByIdAndUpdate(batch.concentrateStore._id, { $set: { amount: newAmounts, price: newPrices, type: newTypes } }, { session })
 
 }
 
@@ -135,33 +141,23 @@ const addConcentrate = async (req: any, res: any): Promise<void> => {
   const session = await Mongoose.startSession()
   session.startTransaction()
   try {
-    const { owner, price, amount } = req.body
+    const { owner, price, amount, type } = req.body
 
     const store = await req.CollectionConcentrateStore.findOne({ owner })
 
-    let addedFlag = false
-
     let newAmounts = [...store.amount]
     let newPrices = [...store.price]
+    let newTypes = [...store.type]
 
-    for (let i = 0; i < newPrices.length; i++) {
-      if (newPrices[i] === price) {
-        newAmounts[i] += amount
-        addedFlag = true
-        break
-      }
-    }
-
-    if (!addedFlag) {
-      newAmounts.push(amount)
-      newPrices.push(price)
-    }
+    newAmounts.push(amount)
+    newPrices.push(price)
+    newTypes.push(type)
 
 
-    const newDoc = new req.CollectionConcentrateStoreInfo({ concentrateStore: store._id, type: ConcentrateStoreInfoEnum.BUY, amount: [amount], price: [price] });
+    const newDoc = new req.CollectionConcentrateStoreInfo({ concentrateStore: store._id, type: ConcentrateStoreInfoEnum.BUY, amount: [amount], price: [price], typeConcentrate: [type] });
     await newDoc.save({ session });
 
-    await req.CollectionConcentrateStore.findByIdAndUpdate(store._id, { $set: { amount: newAmounts, price: newPrices } }, { session })
+    await req.CollectionConcentrateStore.findByIdAndUpdate(store._id, { $set: { amount: newAmounts, price: newPrices, type: newTypes } }, { session })
 
     await session.commitTransaction()
 

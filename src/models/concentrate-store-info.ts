@@ -19,6 +19,9 @@ const getSchema = (company: string): Schema => {
     price: {
       type: [Number]
     },
+    typeConcentrate: {
+      type: [String]
+    },
     date: {
       type: Date,
       default: Date.now

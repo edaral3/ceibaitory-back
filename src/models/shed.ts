@@ -4,7 +4,7 @@ import BirdTypeEnum from '../enum/bird-type.enum'
 const getSchema = (): Schema => {
   const shed = new Schema({
     shedNumber: {
-      type: Number,
+      type: String,
       required: true
     },
     birdType: {

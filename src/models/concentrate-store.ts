@@ -11,6 +11,9 @@ const getSchema = (): Schema => {
       type: [Number],
       required: true
     },
+    type: {
+      type: [String]
+    },
     owner: {
       type: String,
       required: true
