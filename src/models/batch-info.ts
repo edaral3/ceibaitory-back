@@ -36,6 +36,10 @@ const getSchema = (company: string): Schema => {
             type: Number,
             required: false
         },
+        typeConcentrate: {
+            type: String,
+            required: false
+        },
         createdAt: {
             type: Date,
             default: Date.now

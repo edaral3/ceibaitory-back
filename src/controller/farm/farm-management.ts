@@ -106,7 +106,8 @@ const concentrateStoreAction = async (req: any, batch, session: ClientSession): 
     batchId: batch._id,
     action: BatchInfoTypeEnum.CONCENTRATE,
     amount,
-    price: total / amountsInfo.reduce((a, b) => a + b, 0)
+    price: total / amountsInfo.reduce((a, b) => a + b, 0),
+    typeConcentrate: type,
   }
   const newDoc = new req.CollectionBatchInfo(newAction);
   await newDoc.save({ session });
