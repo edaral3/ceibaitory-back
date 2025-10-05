@@ -59,7 +59,6 @@ const concentrateStoreAction = async (req: any, batch, session: ClientSession): 
   let typesInfo: string[] = []
 
   let discountedAll = false
-
   for (let i = 0; i < concentrate.price.length; i++) {
     if (discountedAll) {
       newPrices.push(concentrate.price[i])
@@ -76,14 +75,14 @@ const concentrateStoreAction = async (req: any, batch, session: ClientSession): 
 
         difference = Math.abs(difference)
       } else {
+        pricesInfo.push(concentrate.price[i])
+        typesInfo.push(concentrate.type[i])
+        amountsInfo.push(concentrate.amount[i])
         if (difference !== 0) {
-          pricesInfo.push(concentrate.price[i])
-          amountsInfo.push(concentrate.amount[i] - difference)
-          typesInfo.push(concentrate.type[i])
+          newAmounts.push(difference)
+          newPrices.push(concentrate.price[i])
+          newTypes.push(concentrate.type[i])
         }
-        newAmounts.push(difference)
-        newPrices.push(concentrate.price[i])
-        newTypes.push(concentrate.type[i])
         discountedAll = true
         difference = 0
       }
@@ -109,7 +108,6 @@ const concentrateStoreAction = async (req: any, batch, session: ClientSession): 
     amount,
     price: total / amountsInfo.reduce((a, b) => a + b, 0)
   }
-
   const newDoc = new req.CollectionBatchInfo(newAction);
   await newDoc.save({ session });
 
@@ -120,7 +118,6 @@ const concentrateStoreAction = async (req: any, batch, session: ClientSession): 
     price: pricesInfo,
     typeConcentrate: typesInfo
   }
-
   const newConcentrateStoreInfo = new req.CollectionConcentrateStoreInfo(body);
   await newConcentrateStoreInfo.save({ session });
   await req.CollectionConcentrateStore.findByIdAndUpdate(batch.concentrateStore._id, { $set: { amount: newAmounts, price: newPrices, type: newTypes } }, { session })
