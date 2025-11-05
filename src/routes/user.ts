@@ -7,22 +7,22 @@ import { validator } from '../middleware/bodyValidator'
 
 const router = express.Router()
 
-router.post('/', validateToken(['owner']), validator('user'), encriptData('user'), setCollection('user'), user.create)
+router.post('/', validateToken(['owner', 'owner-farm']), validator('user'), encriptData('user'), setCollection('user'), user.create)
 
 router.post('/userOwner', encriptData('user'), setCollection('userOwner'), user.createOwnerUser)
 
 //router.put('/addFelInformation', encriptData('company'), setCollection('company'), user.addFelInformation)
 
-router.put('/:id', validateToken(['owner']), validator('user'), setCollection('user'), user.update)
+router.put('/:id', validateToken(['owner', 'owner-farm']), validator('user'), setCollection('user'), user.update)
 
-router.delete('/:id', validateToken(['owner']), setCollection('user'), user.delete)
+router.delete('/:id', validateToken(['owner', 'owner-farm']), setCollection('user'), user.delete)
 
 router.get('/billInformation/:nit', validateToken(['owner', 'admin', 'vendedor']), setCollection('user'), user.getBillInformation)
 
-router.get('/isBilling', validateToken(['owner', 'admin', 'vendedor']), setCollection('user'), user.isCompanyBilling)
+router.get('/isBilling', validateToken(['owner', 'admin', 'vendedor', 'owner-farm']), setCollection('user'), user.isCompanyBilling)
 
-router.get('/:id', validateToken(['owner']), setCollection('user'), user.getOne)
+router.get('/:id', validateToken(['owner', 'owner-farm']), setCollection('user'), user.getOne)
 
-router.get('/', validateToken(['owner']), setCollection('user'), user.getAll)
+router.get('/', validateToken(['owner', 'owner-farm']), setCollection('user'), user.getAll)
 
 export default router

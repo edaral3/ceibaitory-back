@@ -29,6 +29,7 @@ const schema = Joi.object({
     .trim()
     .required()
     .messages(messages.validationStringMessages),
-  branch: Joi.array()
+  branch: Joi.array(),
+  isFarm: Joi.allow()
 })
 export default schema

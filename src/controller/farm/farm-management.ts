@@ -1,205 +1,280 @@
 import Mongoose, { type ClientSession } from 'mongoose'
 import BatchInfoTypeEnum from '../../enum/batch-info-type.enum'
 import ConcentrateStoreInfoEnum from '../../enum/concentrate-store-info.enum'
-import PDFDocument from 'pdfkit';
+import PDFDocument from 'pdfkit'
 import "pdfkit-table";
 
-const makeAnAction = async (req: any, res: any): Promise<void> => {
+// ---------- Helpers ------------------------------------------------------
+const sendError = (res: any, error: any, defaultMessage = 'Internal server error') => {
+  if (error?.type === 400) return res.status(400).json({ message: error.message })
+  return res.status(500).json({ message: defaultMessage })
+}
+
+const startSessionWithTransaction = async () => {
   const session = await Mongoose.startSession()
   session.startTransaction()
+  return session
+}
+
+const formatSizeShort = (size?: string) => {
+  if (!size) return ''
+  const s = size.toLowerCase()
+  if (s.includes('peque')) return 'Peq'
+  if (s.includes('mediano')) return 'Med'
+  if (s.includes('grande')) return 'Grd'
+  if (s.includes('jumbo')) return 'Jmb'
+  if (s.includes('quebrado')) return 'Qbd'
+  return size
+}
+
+const formatTypeShort = (type?: string) => {
+  if (!type) return ''
+  const t = type.toLowerCase()
+  if (t === 'caja') return 'Cja'
+  if (t === 'carton') return 'Crt'
+  return type
+}
+
+const pipePdfToResponse = (res: any, doc: PDFDocument, fileName: string) => {
+  res.setHeader('Content-Type', 'application/pdf')
+  res.setHeader('Content-Disposition', `inline; filename=${fileName}`)
+  doc.pipe(res)
+}
+
+const drawTableHeaders = (doc: PDFDocument, tableTop: number, itemHeight: number) => {
+  const draw = (x: number, width: number, label: string) => {
+    doc.rect(x, tableTop, width, itemHeight).stroke()
+    doc.font('Helvetica-Bold').fontSize(12).text(label, x + 10, tableTop + 5)
+  }
+  draw(5, 45, 'Tam')
+  draw(50, 30, 'Tipo')
+  draw(80, 30, 'Cant')
+  draw(110, 50, 'Precio')
+  draw(160, 85, 'Total')
+}
+
+const drawRows = (doc: PDFDocument, rows: any[], tableTop: number, itemHeight: number) => {
+  rows.forEach((row, rowIndex) => {
+    row.forEach((cell: any, colIndex: number) => {
+      let x = 0
+      const y = tableTop + (rowIndex + 1) * itemHeight
+      let width = 0
+      if (colIndex === 0) { x = 5; width = 45 }
+      else if (colIndex === 1) { x = 50; width = 30 }
+      else if (colIndex === 2) { x = 80; width = 30 }
+      else if (colIndex === 3) { x = 110; width = 50 }
+      else if (colIndex === 4) { x = 160; width = 85 }
+      doc.rect(x, y, width, itemHeight).stroke().fontSize(14).text(cell, x + 5, y + 5)
+    })
+  })
+}
+
+// Generic small ticket helpers (used for both chicken and eggs) ----------------
+const writeTicketHeader = (doc: PDFDocument, title: string, id: string, dateText?: string) => {
+  doc.fontSize(20).text('Granja Aldana', { align: 'center' })
+  doc.moveDown(0.5)
+  doc.fontSize(17).text(`Ticket: ${id}`, { align: 'center' })
+  doc.moveDown(1)
+  if (dateText) doc.fontSize(17).text(`Fecha: ${dateText}`)
+}
+
+const writeTicketFooter = (doc: PDFDocument, totalText: string) => {
+  doc.moveDown(1)
+  doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke()
+  doc.moveDown(0.5)
+  doc.fontSize(19).text('TOTAL', { continued: true }).text(` ${totalText}`, { align: 'right' })
+  doc.moveDown(1)
+  doc.fontSize(17).text('Gracias por la compra!', { align: 'center' })
+}
+
+// ---------- Actions ------------------------------------------------------
+const makeAnAction = async (req: any, res: any): Promise<void> => {
+  const session = await startSessionWithTransaction()
   try {
     const { batchId, action } = req.body
-
     const foundBatch = await req.CollectionBatch.findById(batchId)
-
-    if (!foundBatch) {
-      throw { type: 400, message: 'Batch not found' }
-    }
+    if (!foundBatch) throw { type: 400, message: 'Batch not found' }
 
     switch (action) {
       case BatchInfoTypeEnum.CONCENTRATE:
         await concentrateStoreAction(req, foundBatch, session)
-        break;
+        break
+      case BatchInfoTypeEnum.EXTRA:
       case BatchInfoTypeEnum.MORTALITY:
       case BatchInfoTypeEnum.OBASERVATION:
       case BatchInfoTypeEnum.DISCARDED:
       case BatchInfoTypeEnum.DAILY_PRODUCTION:
+      case BatchInfoTypeEnum.DAILY_PRODUCTION:
       case BatchInfoTypeEnum.WASTED:
         await simpleAction(req, foundBatch, action, session)
-        break;
+        break
+      default:
+        throw { type: 400, message: 'Invalid action' }
     }
 
     await session.commitTransaction()
-
     res.send({ message: 'OK' })
   } catch (error: any) {
     await session.abortTransaction()
-    if (error.type === 400) {
-      res.status(400).json({ message: error.message })
-    } else {
-      res.status(500).json({ message: 'Error creating sale' })
-    }
+    sendError(res, error, 'Error creating action')
   } finally {
     await session.endSession()
   }
 }
 
-const concentrateStoreAction = async (req: any, batch, session: ClientSession): Promise<void> => {
+const concentrateStoreAction = async (req: any, batch: any, session: ClientSession): Promise<void> => {
   const { amount, type } = req.body
-
   const concentrate = await req.CollectionConcentrateStore.findById(batch.concentrateStore._id)
+  if (!concentrate) throw { type: 400, message: 'Concentrate store not found' }
 
-  let newPrices: number[] = []
-  let newAmounts: number[] = []
-  let newTypes: string[] = []
-  let difference = amount;
+  const newPrices: number[] = []
+  const newAmounts: number[] = []
+  const newTypes: string[] = []
 
-  let pricesInfo: number[] = []
-  let amountsInfo: number[] = []
-  let typesInfo: string[] = []
+  const takenPrices: number[] = []
+  const takenAmounts: number[] = []
+  const takenTypes: string[] = []
 
+  let remaining = amount
   let discountedAll = false
+
   for (let i = 0; i < concentrate.price.length; i++) {
-    if (discountedAll) {
-      newPrices.push(concentrate.price[i])
-      newAmounts.push(concentrate.amount[i])
-      newTypes.push(concentrate.type[i])
+    const cType = concentrate.type[i]
+    const cAmount = concentrate.amount[i]
+    const cPrice = concentrate.price[i]
+
+    if (discountedAll || cType !== type) {
+      newPrices.push(cPrice)
+      newAmounts.push(cAmount)
+      newTypes.push(cType)
       continue
     }
-    if (concentrate.type[i] === type) {
-      difference = concentrate.amount[i] - difference
-      if (difference < 0) {
-        pricesInfo.push(concentrate.price[i])
-        amountsInfo.push(concentrate.amount[i])
-        typesInfo.push(concentrate.type[i])
 
-        difference = Math.abs(difference)
-      } else {
-        pricesInfo.push(concentrate.price[i])
-        typesInfo.push(concentrate.type[i])
-        amountsInfo.push(concentrate.amount[i])
-        if (difference !== 0) {
-          newAmounts.push(difference)
-          newPrices.push(concentrate.price[i])
-          newTypes.push(concentrate.type[i])
-        }
-        discountedAll = true
-        difference = 0
-      }
+    if (remaining <= 0) {
+      newPrices.push(cPrice)
+      newAmounts.push(cAmount)
+      newTypes.push(cType)
+      continue
+    }
+
+    if (cAmount > remaining) {
+      takenPrices.push(cPrice)
+      takenAmounts.push(remaining)
+      takenTypes.push(cType)
+
+      newPrices.push(cPrice)
+      newAmounts.push(cAmount - remaining)
+      newTypes.push(cType)
+
+      remaining = 0
+      discountedAll = true
     } else {
-      newPrices.push(concentrate.price[i])
-      newAmounts.push(concentrate.amount[i])
-      newTypes.push(concentrate.type[i])
+      takenPrices.push(cPrice)
+      takenAmounts.push(cAmount)
+      takenTypes.push(cType)
+      remaining -= cAmount
     }
   }
-  
-  if (difference > 0) {
-    throw { type: 400, message: 'No hay suficiente concentrado en la bodega' }
-  }
 
-  let total = 0;
-  for (let i = 0; i < amountsInfo.length; i++) {
-    total += amountsInfo[i] * pricesInfo[i];
-  }
+  if (remaining > 0) throw { type: 400, message: 'No hay suficiente concentrado en la bodega' }
+
+  const totalCost = takenAmounts.reduce((acc, a, idx) => acc + a * takenPrices[idx], 0)
+  const unitsTaken = takenAmounts.reduce((a, b) => a + b, 0)
+  const avgPrice = unitsTaken > 0 ? totalCost / unitsTaken : 0
 
   const newAction = {
     batchId: batch._id,
     action: BatchInfoTypeEnum.CONCENTRATE,
     amount,
-    price: total / amountsInfo.reduce((a, b) => a + b, 0),
+    price: avgPrice,
     typeConcentrate: type,
-  }
-  const newDoc = new req.CollectionBatchInfo(newAction);
-  await newDoc.save({ session });
+    concentrateStore: batch.concentrateStore._id
 
-  const body = {
+  }
+  const newDoc = new req.CollectionBatchInfo(newAction)
+  await newDoc.save({ session })
+
+  const storeInfoBody = {
     concentrateStore: batch.concentrateStore,
     type: ConcentrateStoreInfoEnum.OUTPUT,
-    amount: amountsInfo,
-    price: pricesInfo,
-    typeConcentrate: typesInfo
+    amount: takenAmounts,
+    price: takenPrices,
+    typeConcentrate: takenTypes
   }
-  const newConcentrateStoreInfo = new req.CollectionConcentrateStoreInfo(body);
-  await newConcentrateStoreInfo.save({ session });
-  await req.CollectionConcentrateStore.findByIdAndUpdate(batch.concentrateStore._id, { $set: { amount: newAmounts, price: newPrices, type: newTypes } }, { session })
+  const newConcentrateStoreInfo = new req.CollectionConcentrateStoreInfo(storeInfoBody)
+  await newConcentrateStoreInfo.save({ session })
 
+  await req.CollectionConcentrateStore.findByIdAndUpdate(
+    batch.concentrateStore._id,
+    { $set: { amount: newAmounts, price: newPrices, type: newTypes } },
+    { session }
+  )
 }
 
-const simpleAction = async (req: any, batch, action: BatchInfoTypeEnum, session: ClientSession): Promise<void> => {
+const simpleAction = async (req: any, batch: any, action: BatchInfoTypeEnum, session: ClientSession): Promise<void> => {
   const newAction = {
     batchId: batch._id,
-    ...req.body,
+    ...req.body
   }
-
-  const newDoc = new req.CollectionBatchInfo(newAction);
-  await newDoc.save({ session });
+  const newDoc = new req.CollectionBatchInfo(newAction)
+  await newDoc.save({ session })
 }
 
 const addConcentrate = async (req: any, res: any): Promise<void> => {
-  const session = await Mongoose.startSession()
-  session.startTransaction()
+  const session = await startSessionWithTransaction()
   try {
     const { owner, price, amount, type } = req.body
-
     const store = await req.CollectionConcentrateStore.findOne({ owner })
+    if (!store) throw { type: 400, message: 'Store not found' }
 
-    let newAmounts = [...store.amount]
-    let newPrices = [...store.price]
-    let newTypes = [...store.type]
+    const newAmounts = [...store.amount, amount]
+    const newPrices = [...store.price, price]
+    const newTypes = [...store.type, type]
 
-    newAmounts.push(amount)
-    newPrices.push(price)
-    newTypes.push(type)
+    const newDoc = new req.CollectionConcentrateStoreInfo({
+      concentrateStore: store._id,
+      type: ConcentrateStoreInfoEnum.BUY,
+      amount: [amount],
+      price: [price],
+      typeConcentrate: [type]
+    })
+    await newDoc.save({ session })
 
-
-    const newDoc = new req.CollectionConcentrateStoreInfo({ concentrateStore: store._id, type: ConcentrateStoreInfoEnum.BUY, amount: [amount], price: [price], typeConcentrate: [type] });
-    await newDoc.save({ session });
-
-    await req.CollectionConcentrateStore.findByIdAndUpdate(store._id, { $set: { amount: newAmounts, price: newPrices, type: newTypes } }, { session })
+    await req.CollectionConcentrateStore.findByIdAndUpdate(store._id, { $set: { amount: newAmounts, price: newPrices, type: newTypes, concentrateStore: newDoc._id } }, { session })
 
     await session.commitTransaction()
-
     res.send({ message: 'OK' })
   } catch (error: any) {
     await session.abortTransaction()
-    if (error.type === 400) {
-      res.status(400).json({ message: error.message })
-    } else {
-      res.status(500).json({ message: 'Error creating sale' })
-    }
+    sendError(res, error, 'Error adding concentrate')
   } finally {
     await session.endSession()
   }
 }
 
+// ---------- Batch CRUD --------------------------------------------------
 const createBatch = async (req: any, res: any): Promise<void> => {
   try {
     const { shedId, startDate, concentrateStoreId, employeeId, initialChickenAmount } = req.body
-
     const foundShed = await req.CollectionShed.findById(shedId)
-
-    if (!foundShed) {
-      throw { type: 400, message: 'Shed not found' }
-    }
+    if (!foundShed) throw { type: 400, message: 'Shed not found' }
 
     const foundBatch = await req.CollectionBatch.findOne({ shed: foundShed, state: true })
+    if (foundBatch) throw { type: 400, message: 'Ya hay un lote activo en este galpón' }
 
-    if (foundBatch) {
-      throw { type: 400, message: 'Ya hay un lote activo en este galpón' }
-    }
     const newBatch = {
       shed: foundShed._id,
       birdType: foundShed.birdType,
       inCharge: employeeId,
       concentrateStore: concentrateStoreId,
       amount: initialChickenAmount,
-      startDate: startDate
+      startDate
     }
 
     await req.CollectionBatch.create(newBatch)
     res.send({ message: 'OK' })
   } catch (error: any) {
-    throw { type: 400, message: 'Error creating batch' }
+    sendError(res, error, 'Error creating batch')
   }
 }
 
@@ -207,28 +282,26 @@ const getActiveBatches = async (req: any, res: any): Promise<void> => {
   try {
     const batches = await req.CollectionBatch.find({ state: true }).populate('shed').populate('inCharge').populate('concentrateStore')
     res.send(batches)
-  } catch (error) {
-    res.status(400).json({ message: 'Error getting batches' })
+  } catch (error: any) {
+    sendError(res, error, 'Error getting batches')
   }
 }
-
 
 const getBatches = async (req: any, res: any): Promise<void> => {
   try {
     const batches = await req.CollectionBatch.find().populate('shed').populate('inCharge').populate('concentrateStore')
     res.send(batches)
-  } catch (error) {
-    res.status(400).json({ message: 'Error getting batches' })
+  } catch (error: any) {
+    sendError(res, error, 'Error getting batches')
   }
 }
 
 const getSheds = async (req: any, res: any): Promise<void> => {
   try {
     const sheds = await req.CollectionShed.find()
-
     res.send(sheds)
-  } catch (error) {
-    res.status(400).json({ message: 'Error getting sheds' })
+  } catch (error: any) {
+    sendError(res, error, 'Error getting sheds')
   }
 }
 
@@ -236,26 +309,20 @@ const getStores = async (req: any, res: any): Promise<void> => {
   try {
     const stores = await req.CollectionConcentrateStore.find()
     res.send(stores)
-  } catch (error) {
-    res.status(400).json({ message: 'Error getting stores' })
+  } catch (error: any) {
+    sendError(res, error, 'Error getting stores')
   }
 }
 
 const updateBatch = async (req: any, res: any): Promise<void> => {
   try {
     const { batchId, shed, startDate, concentrateStore: concentrateStoreId, employees, initialChickenAmount, state } = req.body
-
     const foundBatch = await req.CollectionBatch.findById(batchId)
-    if (!foundBatch) {
-      throw { type: 400, message: 'Batch not found' }
-    }
+    if (!foundBatch) throw { type: 400, message: 'Batch not found' }
 
     if (foundBatch.shed.toString() !== shed._id.toString()) {
       const anotherBatch = await req.CollectionBatch.findOne({ shed: shed._id, state: true })
-
-      if (anotherBatch) {
-        throw { type: 400, message: 'Ya hay un lote activo en este galpón' }
-      }
+      if (anotherBatch) throw { type: 400, message: 'Ya hay un lote activo en este galpón' }
     }
 
     const updatedBatch = {
@@ -269,109 +336,90 @@ const updateBatch = async (req: any, res: any): Promise<void> => {
     }
 
     await req.CollectionBatch.findByIdAndUpdate(batchId, updatedBatch)
-
     res.send({ message: 'OK' })
   } catch (error: any) {
-    if (error.type === 400) {
-      res.status(400).json({ message: error.message })
-    } else {
-      res.status(500).json({ message: 'Error updating batch' })
-    }
+    sendError(res, error, 'Error updating batch')
   }
 }
 
+// ---------- Chicken sale ------------------------------------------------
 const chickenSale = async (req: any, res: any): Promise<void> => {
   const { chickenBatch, clientId, saleDate } = req.body
-
-  const session = await Mongoose.startSession()
-  session.startTransaction()
+  const session = await startSessionWithTransaction()
 
   try {
     const client = await req.CollectionClient.findById(clientId)
+    if (!client) throw { type: 400, message: 'Client not found' }
 
-    if (!client) {
-      throw { type: 400, message: 'Client not found' }
-    }
-
-    const totalChickenAmount = chickenBatch.reduce((acc: number, batch: any) => acc + batch.amount, 0)
-    const totalChickenPound = chickenBatch.reduce((acc: number, batch: any) => acc + batch.pound, 0)
+    const totalChickenAmount = chickenBatch.reduce((acc: number, b: any) => acc + (b.amount || 0), 0)
+    const totalChickenPound = chickenBatch.reduce((acc: number, b: any) => acc + (b.pound || 0), 0)
     const totalSale = totalChickenPound * client.salePrice
 
-    const chickenSale = new req.CollectionChickenSale({ client: clientId, date: saleDate, chickenAmount: totalChickenAmount, weight: totalChickenPound, total: totalSale, averageWeight: totalChickenPound / totalChickenAmount, paid: false });
+    const chickenSale = new req.CollectionChickenSale({
+      client: clientId,
+      date: saleDate,
+      chickenAmount: totalChickenAmount,
+      weight: totalChickenPound,
+      total: totalSale,
+      averageWeight: totalChickenPound / (totalChickenAmount || 1),
+      paid: false
+    })
 
-    await chickenSale.save({ session });
+    await chickenSale.save({ session })
+
     for (const batchSale of chickenBatch) {
       const batch = await req.CollectionBatch.findOne({ shed: batchSale.shed, state: true })
       const newAction = {
         batchId: batch._id,
         action: BatchInfoTypeEnum.SALE,
-        amount: totalChickenAmount,
+        amount: batchSale.amount,
         price: client.salePrice,
-        chikenSale: chickenSale._id,
-
+        chikenSale: chickenSale._id
       }
-      const newDoc = new req.CollectionBatchInfo(newAction);
-      await newDoc.save({ session });
+      const newDoc = new req.CollectionBatchInfo(newAction)
+      await newDoc.save({ session })
     }
 
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename=ticket-${chickenSale._id}.pdf`);
-
-    const doc = new PDFDocument({ size: [250, 400], margin: 12 }); // small receipt size
-    doc.pipe(res);
-
-    // Header
-    doc.fontSize(20).text("Granja Aldana", { align: 'center' });
-    doc.moveDown(0.5);
-
-    doc.fontSize(17).text(`Ticket: ${chickenSale._id}`, { align: 'center' });
-    doc.moveDown(1);
-    doc.fontSize(17).text(`Fecha: ${saleDate}`);
-    doc.fontSize(17).text(`Cliente: ${client.name}`);
-
-    doc.moveDown(1.5);
-    doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke();
-
-    // Items
-    doc.moveDown(0.5);
-
-    doc.fontSize(17).text(`Cantidad de pollos`, { continued: true }).text(`${totalChickenAmount}`, { align: 'right' });
-    doc.fontSize(17).text(`Cantidad de libras`, { continued: true }).text(`${totalChickenPound}`, { align: 'right' });
-
-    doc.moveDown(0.5);
-    doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke();
-
-    // Total
-    doc.moveDown(0.5);
-    doc.fontSize(19).text('TOTAL', { continued: true }).text(` Q${totalSale.toFixed(2)}`, { align: 'right' });
-
-    // Footer
-    doc.moveDown(1);
-    doc.fontSize(17).text('Gracias por la compra!', { align: 'center' });
-
+    // PDF generation (shared helper)
+    generateChickenPdf(res, chickenSale, saleDate)
 
     await session.commitTransaction()
-    doc.end();
   } catch (error: any) {
     await session.abortTransaction()
-    if (error.type === 400) {
-      res.status(400).json({ message: error.message })
-    } else {
-      res.status(500).json({ message: 'Error updating batch' })
-    }
+    sendError(res, error, 'Error creating chicken sale')
   } finally {
     await session.endSession()
   }
 }
 
+const generateChickenPdf = (res: any, chickenSale: any, saleDate: string) => {
+  const doc = new PDFDocument({ size: [250, 400], margin: 12 })
+  pipePdfToResponse(res, doc, `ticket-${chickenSale._id}.pdf`)
+
+  // Header
+  writeTicketHeader(doc, 'Granja Aldana', chickenSale._id, saleDate)
+  doc.fontSize(17).text(`Cliente: ${chickenSale.client ?? ''}`)
+
+  doc.moveDown(1.5)
+  doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke()
+
+  // Items
+  const totalChickenAmount = chickenSale.chickenAmount ?? 0
+  const totalChickenPound = chickenSale.weight ?? 0
+  doc.moveDown(0.5)
+  doc.fontSize(17).text(`Cantidad de pollos`, { continued: true }).text(`${totalChickenAmount}`, { align: 'right' })
+  doc.fontSize(17).text(`Cantidad de libras`, { continued: true }).text(`${totalChickenPound}`, { align: 'right' })
+
+  writeTicketFooter(doc, `Q${(chickenSale.total ?? 0).toFixed(2)}`)
+  doc.end()
+}
+
 const getClients = async (req: any, res: any): Promise<void> => {
   try {
     const clients = await req.CollectionClient.find()
-
     res.send(clients)
-  } catch (error) {
-    res.status(400).json({ message: 'Error getting clients' })
+  } catch (error: any) {
+    sendError(res, error, 'Error getting clients')
   }
 }
 
@@ -380,93 +428,42 @@ const chickenSales = async (req: any, res: any): Promise<void> => {
     const sales = await req.CollectionChickenSale.find().populate('client').limit(50).sort({ date: -1 })
     res.send(sales)
   } catch (error: any) {
-    if (error.type === 400) {
-      res.status(400).json({ message: error.message })
-    } else {
-      res.status(500).json({ message: 'Error getting sales' })
-    }
+    sendError(res, error, 'Error getting sales')
   }
 }
 
 const getChickenBill = async (req: any, res: any): Promise<void> => {
-  const { billId } = req.params
   try {
+    const { billId } = req.params
     const chickenSale = await req.CollectionChickenSale.findById(billId).populate('client')
+    if (!chickenSale) throw { type: 400, message: 'Bill not found' }
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename=ticket-${chickenSale._id}.pdf`);
-
-    const doc = new PDFDocument({ size: [250, 400], margin: 12 }); // small receipt size
-    doc.pipe(res);
-
-    // Header
-    doc.fontSize(20).text("Granja Aldana", { align: 'center' });
-    doc.moveDown(0.5);
-
-    doc.fontSize(17).text(`Ticket: ${chickenSale._id}`, { align: 'center' });
-    doc.moveDown(1);
-    const newDate = new Date(chickenSale.date);
-    doc.fontSize(17).text(`Fecha: ${newDate.toISOString().split('T')[0]}`);
-    doc.fontSize(17).text(`Cliente: ${chickenSale.client?.name}`);
-
-    doc.moveDown(1.5);
-    doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke();
-
-    // Items
-    doc.moveDown(0.5);
-
-    doc.fontSize(17).text(`Cantidad de pollos`, { continued: true }).text(`${chickenSale.chickenAmount}`, { align: 'right' });
-    doc.fontSize(17).text(`Cantidad de libras`, { continued: true }).text(`${chickenSale.weight}`, { align: 'right' });
-
-    doc.moveDown(0.5);
-    doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke();
-
-    // Total
-    doc.moveDown(0.5);
-    doc.fontSize(19).text('TOTAL', { continued: true }).text(` Q${chickenSale.total.toFixed(2)}`, { align: 'right' });
-
-    // Footer
-    doc.moveDown(1);
-    doc.fontSize(17).text('Gracias por la compra!', { align: 'center' });
-
-    doc.end();
+    generateChickenPdf(res, chickenSale, new Date(chickenSale.date).toISOString().split('T')[0])
   } catch (error: any) {
-    if (error.type === 400) {
-      res.status(400).json({ message: error.message })
-    } else {
-      res.status(500).json({ message: 'Error getting bill' })
-    }
+    sendError(res, error, 'Error getting bill')
   }
 }
 
 const updateChickenBillState = async (req: any, res: any): Promise<void> => {
-  const { billId } = req.params
   try {
+    const { billId } = req.params
     const chickenSale = await req.CollectionChickenSale.findById(billId)
-
-    if (!chickenSale) {
-      throw { type: 400, message: 'Bill not found' }
-    }
+    if (!chickenSale) throw { type: 400, message: 'Bill not found' }
 
     await req.CollectionChickenSale.findByIdAndUpdate(billId, { $set: { paid: true } })
-
     res.send({ message: 'OK' })
   } catch (error: any) {
-    if (error.type === 400) {
-      res.status(400).json({ message: error.message })
-    } else {
-      res.status(500).json({ message: 'Error updating bill' })
-    }
+    sendError(res, error, 'Error updating bill')
   }
 }
 
 const getBatchInfo = async (req: any, res: any): Promise<void> => {
-  const { batchId } = req.params
   try {
+    const { batchId } = req.params
     const batchInfo = await req.CollectionBatchInfo.find({ batchId }).populate('chikenSale')
     res.send(batchInfo)
-  } catch (error) {
-    res.status(400).json({ message: 'Error getting batch info' })
+  } catch (error: any) {
+    sendError(res, error, 'Error getting batch info')
   }
 }
 
@@ -474,165 +471,80 @@ const getUsers = async (req: any, res: any): Promise<void> => {
   try {
     const users = await req.CollectionUser.find({ company: req.company }, '-pwd')
     res.send(users)
-  } catch (error) {
-    res.status(400).json({ message: 'Error getting users' })
+  } catch (error: any) {
+    sendError(res, error, 'Error getting users')
   }
 }
 
-const eggSale = async (req: any, res: any): Promise<void> => {
-  const { data, saleDate } = req.body
+// ---------- Egg sale ----------------------------------------------------
+const buildEggRows = (eggSale: any) => {
+  const rows: any[] = []
+  for (let i = 0; i < eggSale.size.length; i++) {
+    const s = formatSizeShort(eggSale.size[i])
+    const t = formatTypeShort(eggSale.type[i])
+    let unitPrice = eggSale.price[i]
+    let rowTotal = 0
+    if (eggSale.type[i].toLowerCase() !== 'caja') {
+      unitPrice = unitPrice / 12
+      rowTotal = (eggSale.amount[i] * eggSale.price[i]) / 12
+    } else {
+      rowTotal = eggSale.amount[i] * eggSale.price[i]
+    }
+    rows.push([s, t, `${eggSale.amount[i]}`, `${unitPrice.toFixed(2)}`, `${rowTotal.toFixed(2)}`])
+  }
+  rows.push(['', '', '', '', ''])
+  rows.push(['', '', '', 'Total', `${(eggSale.total ?? 0).toFixed(2)}`])
+  return rows
+}
 
+const generateEggPdf = (res: any, eggSale: any, saleDate: string) => {
+  const doc = new PDFDocument({ size: [250, 450], margin: 12 })
+  pipePdfToResponse(res, doc, `ticket-${eggSale._id}.pdf`)
+
+  writeTicketHeader(doc, 'Granja Aldana', eggSale._id, saleDate)
+  doc.moveDown(0.1)
+  doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke()
+
+  const tableTop = 140
+  const itemHeight = 20
+  drawTableHeaders(doc, tableTop, itemHeight)
+
+  const rows = buildEggRows(eggSale)
+  drawRows(doc, rows, tableTop, itemHeight)
+
+  doc.end()
+}
+
+const eggSale = async (req: any, res: any): Promise<void> => {
   try {
+    const { data, saleDate } = req.body
     const prices = await req.CollectionEggPrice.find()
 
-    const size: number[] = []
+    const size: string[] = []
     const type: string[] = []
     const amount: number[] = []
     const price: number[] = []
-    const totals: number[] = []
-    let total = 0;
+    let total = 0
 
     for (const item of data) {
-      const priceItem = prices.find(pr => pr.type.toLowerCase() === item.size.toLowerCase())
+      const priceItem = prices.find((pr: any) => pr.type.toLowerCase() === item.size.toLowerCase())
+      const itemPrice = priceItem?.price ?? 0
 
       size.push(item.size)
       type.push(item.type.toLowerCase())
-      price.push(priceItem.price)
+      price.push(itemPrice)
       amount.push(item.amount)
 
-      if (item.type.toLowerCase() === 'caja') {
-        total += priceItem.price * item.amount
-        totals.push(priceItem.price * item.amount)
-      } else {
-        total += priceItem.price / 12 * item.amount
-        totals.push(priceItem.price / 12 * item.amount)
-      }
+      if (item.type.toLowerCase() === 'caja') total += itemPrice * item.amount
+      else total += (itemPrice / 12) * item.amount
     }
 
-    const eggSale = new req.CollectionEggSale({ size, type, amount, price, total, date: saleDate });
+    const eggSale = new req.CollectionEggSale({ size, type, amount, price, total, date: saleDate })
+    await eggSale.save()
 
-    await eggSale.save();
-
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename=ticket-${eggSale._id}.pdf`);
-
-    const doc = new PDFDocument({ size: [250, 400], margin: 12 }); // small receipt size
-    doc.pipe(res);
-
-    // Header
-    doc.fontSize(20).text("Granja Aldana", { align: 'center' });
-    doc.moveDown(0.5);
-
-    doc.fontSize(17).text(`Ticket: ${eggSale._id}`, { align: 'center' });
-    doc.moveDown(1);
-    doc.fontSize(17).text(`Fecha: ${saleDate}`);
-
-    doc.moveDown(0.1);
-    doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke();
-
-
-    // Table settings
-    const tableTop = 140;
-    const itemHeight = 20;
-
-    // Draw headers
-    doc.rect(5, tableTop, 45, itemHeight)
-      .stroke()
-      .font('Helvetica-Bold')   // <- set font to bold
-      .fontSize(12)
-      .text('Tam', 15, tableTop + 5);
-
-    doc.rect(50, tableTop, 30, itemHeight)
-      .stroke()
-      .font('Helvetica-Bold')   // <- set font to bold
-      .fontSize(12)
-      .text('Tipo', 53, tableTop + 5);
-
-    doc.rect(80, tableTop, 30, itemHeight)
-      .stroke()
-      .font('Helvetica-Bold')   // <- set font to bold
-      .fontSize(12)
-      .text('Cant', 82, tableTop + 5);
-
-    doc.rect(110, tableTop, 50, itemHeight)
-      .stroke()
-      .font('Helvetica-Bold')   // <- set font to bold
-      .fontSize(12)
-      .text('Precio', 118, tableTop + 5);
-
-
-    doc.rect(160, tableTop, 85, itemHeight)
-      .stroke()
-      .font('Helvetica-Bold')   // <- set font to bold
-      .fontSize(12)
-      .text('Total', 195, tableTop + 5);
-
-    // Example rows
-    const rows: any = [];
-
-    for (const item of data) {
-      const priceItem = prices.find(pr => pr.type.toLowerCase() === item.size.toLowerCase())
-      let size = item.size
-
-      if (size.toLowerCase() === 'pequeño') {
-        size = 'Peq'
-      }
-      else if (size.toLowerCase() === 'mediano') {
-        size = 'Med'
-      }
-      else if (size.toLowerCase() === 'grande') {
-        size = 'Grd'
-      }
-      else if (size.toLowerCase() === 'jumbo') {
-        size = 'Jmb'
-      }
-      if (item.type.toLowerCase() === 'caja') {
-        rows.push([size, 'Cja', `${item.amount}`, `${priceItem.price}`, `${item.amount * priceItem.price}`])
-      } else {
-        rows.push([size, 'Crt', `${item.amount}`, `${(priceItem.price / 12).toFixed(2)}`, `${((item.amount * priceItem.price) / 12).toFixed(2)}`])
-      }
-    }
-
-    rows.push([``, '', '', ``, ``])
-    rows.push([``, '', '', `Total`, `${total.toFixed(2)}`])
-
-    // Draw rows
-    rows.forEach((row, rowIndex) => {
-      row.forEach((cell, colIndex) => {
-        let x = 0;
-        const y = tableTop + (rowIndex + 1) * itemHeight;
-        let width = 0;
-        if (colIndex === 0) {
-          x = 5;
-          width = 45;
-        } else if (colIndex === 1) {
-          x = 50;
-          width = 30;
-        } else if (colIndex === 2) {
-          x = 80;
-          width = 30;
-        } else if (colIndex === 3) {
-          x = 110;
-          width = 50;
-        } else if (colIndex === 4) {
-          x = 160;
-          width = 85;
-        }
-        doc
-          .rect(x, y, width, itemHeight)
-          .stroke()
-          .fontSize(14)
-          .text(cell, x + 5, y + 5);
-      });
-    });
-
-    doc.end();
+    generateEggPdf(res, eggSale, saleDate)
   } catch (error: any) {
-    if (error.type === 400) {
-      res.status(400).json({ message: error.message })
-    } else {
-      res.status(500).json({ message: 'Error updating batch' })
-    }
+    sendError(res, error, 'Error creating egg sale')
   }
 }
 
@@ -641,234 +553,169 @@ const eggSales = async (req: any, res: any): Promise<void> => {
     const sales = await req.CollectionEggSale.find().limit(100).sort({ date: -1 })
     res.send(sales)
   } catch (error: any) {
-    if (error.type === 400) {
-      res.status(400).json({ message: error.message })
-    } else {
-      res.status(500).json({ message: 'Error getting sales' })
-    }
+    sendError(res, error, 'Error getting sales')
   }
 }
 
 const eggPrice = async (req: any, res: any): Promise<void> => {
   try {
-    const sales = await req.CollectionEggPrice.find()
-    res.send(sales)
+    const prices = await req.CollectionEggPrice.find()
+    res.send(prices)
   } catch (error: any) {
-    if (error.type === 400) {
-      res.status(400).json({ message: error.message })
-    } else {
-      res.status(500).json({ message: 'Error getting sales' })
-    }
+    sendError(res, error, 'Error getting egg prices')
   }
 }
-
 
 const updateEggPrice = async (req: any, res: any): Promise<void> => {
   try {
     const { id, price } = req.body
-    const sales = await req.CollectionEggPrice.findByIdAndUpdate(id, { $set: { price: price } }, { new: true })
-    res.send(sales)
+    const updated = await req.CollectionEggPrice.findByIdAndUpdate(id, { $set: { price } }, { new: true })
+    res.send(updated)
   } catch (error: any) {
-    if (error.type === 400) {
-      res.status(400).json({ message: error.message })
-    } else {
-      res.status(500).json({ message: 'Error getting sales' })
-    }
+    sendError(res, error, 'Error updating egg price')
   }
 }
 
 const updateEggBillState = async (req: any, res: any): Promise<void> => {
-  const { billId } = req.params
   try {
+    const { billId } = req.params
     const eggSale = await req.CollectionEggSale.findById(billId)
-
-    if (!eggSale) {
-      throw { type: 400, message: 'Bill not found' }
-    }
-
+    if (!eggSale) throw { type: 400, message: 'Bill not found' }
     await req.CollectionEggSale.findByIdAndUpdate(billId, { $set: { paid: true } })
-
     res.send({ message: 'OK' })
   } catch (error: any) {
-    if (error.type === 400) {
-      res.status(400).json({ message: error.message })
-    } else {
-      res.status(500).json({ message: 'Error updating bill' })
-    }
+    sendError(res, error, 'Error updating bill')
   }
 }
 
 const getEggBill = async (req: any, res: any): Promise<void> => {
-  const { billId } = req.params
   try {
+    const { billId } = req.params
     const eggSale = await req.CollectionEggSale.findById(billId)
+    if (!eggSale) throw { type: 400, message: 'Bill not found' }
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename=ticket-${eggSale._id}.pdf`);
-
-    const doc = new PDFDocument({ size: [250, 450], margin: 12 }); // small receipt size
-    doc.pipe(res);
-
-    // Header
-    doc.fontSize(20).text("Granja Aldana", { align: 'center' });
-    doc.moveDown(0.5);
-
-    doc.fontSize(17).text(`Ticket: ${eggSale._id}`, { align: 'center' });
-    doc.moveDown(1);
-    doc.fontSize(17).text(`Fecha: ${eggSale.date.toISOString().split('T')[0]}`);
-
-    doc.moveDown(0.1);
-    doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke();
-
-
-    // Table settings
-    const tableTop = 140;
-    const itemHeight = 20;
-
-    // Draw headers
-    doc.rect(5, tableTop, 45, itemHeight)
-      .stroke()
-      .font('Helvetica-Bold')   // <- set font to bold
-      .fontSize(12)
-      .text('Tam', 15, tableTop + 5);
-
-    doc.rect(50, tableTop, 30, itemHeight)
-      .stroke()
-      .font('Helvetica-Bold')   // <- set font to bold
-      .fontSize(12)
-      .text('Tipo', 53, tableTop + 5);
-
-    doc.rect(80, tableTop, 30, itemHeight)
-      .stroke()
-      .font('Helvetica-Bold')   // <- set font to bold
-      .fontSize(12)
-      .text('Cant', 82, tableTop + 5);
-
-    doc.rect(110, tableTop, 50, itemHeight)
-      .stroke()
-      .font('Helvetica-Bold')   // <- set font to bold
-      .fontSize(12)
-      .text('Precio', 118, tableTop + 5);
-
-    doc.rect(160, tableTop, 85, itemHeight)
-      .stroke()
-      .font('Helvetica-Bold')   // <- set font to bold
-      .fontSize(12)
-      .text('Total', 195, tableTop + 5);
-
-    // Example rows
-    const rows: any = [];
-
-    for (let i = 0; i < eggSale.size.length; i++) {
-      let total = 0;
-      let price = 0;
-      if (eggSale.type[i].toLowerCase() !== 'caja') {
-        price = eggSale.price[i] / 12;
-        total = (eggSale.amount[i] * eggSale.price[i]) / 12;
-      } else {
-        price = eggSale.price[i];
-        total = eggSale.amount[i] * eggSale.price[i];
-      }
-      let size = eggSale.size[i]
-
-      if (size.toLowerCase() === 'pequeño') {
-        size = 'Peq'
-      }
-      else if (size.toLowerCase() === 'mediano') {
-        size = 'Med'
-      }
-      else if (size.toLowerCase() === 'grande') {
-        size = 'Grd'
-      }
-      else if (size.toLowerCase() === 'jumbo') {
-        size = 'Jmb'
-      }
-
-      let type = eggSale.type[i]
-      if (type.toLowerCase() === 'caja') {
-        type = 'Cja'
-      }
-      else if (type.toLowerCase() === 'carton') {
-        type = 'Crt'
-      }
-
-      rows.push([size, type, `${eggSale.amount[i]}`, `${(price).toFixed(2)}`, `${(total).toFixed(2)}`])
-    }
-
-    rows.push([``, '', '', ``, ``])
-    rows.push([``, '', '', `Total`, `${eggSale.total.toFixed(2)}`])
-
-    // Draw rows
-    rows.forEach((row, rowIndex) => {
-      row.forEach((cell, colIndex) => {
-        let x = 0;
-        const y = tableTop + (rowIndex + 1) * itemHeight;
-        let width = 0;
-        if (colIndex === 0) {
-          x = 5;
-          width = 45;
-        } else if (colIndex === 1) {
-          x = 50;
-          width = 30;
-        } else if (colIndex === 2) {
-          x = 80;
-          width = 30;
-        } else if (colIndex === 3) {
-          x = 110;
-          width = 50;
-        } else if (colIndex === 4) {
-          x = 160;
-          width = 85;
-        }
-        doc
-          .rect(x, y, width, itemHeight)
-          .stroke()
-          .fontSize(14)
-          .text(cell, x + 5, y + 5);
-      });
-    });
-
-
-    doc.end();
+    generateEggPdf(res, eggSale, new Date(eggSale.date).toISOString().split('T')[0])
   } catch (error: any) {
-    if (error.type === 400) {
-      res.status(400).json({ message: error.message })
-    } else {
-      res.status(500).json({ message: 'Error getting bill' })
-    }
+    sendError(res, error, 'Error getting bill')
   }
 }
 
 const eggSalesBetween = async (req: any, res: any): Promise<void> => {
   try {
     const { startDate, endDate } = req.query
-    if (!startDate || !endDate) {
-      throw { type: 400, message: 'Start date and end date are required' }
-    }
-    const sales = await req.CollectionEggSale.find({
-      date: { $gte: new Date(startDate), $lte: new Date(endDate) }
-    })
+    if (!startDate || !endDate) throw { type: 400, message: 'Start date and end date are required' }
+    const sales = await req.CollectionEggSale.find({ date: { $gte: new Date(startDate), $lte: new Date(endDate) } })
     res.send(sales)
   } catch (error: any) {
-    if (error.type === 400) {
-      res.status(400).json({ message: error.message })
-    } else {
-      res.status(500).json({ message: 'Error getting sales' })
-    }
+    sendError(res, error, 'Error getting sales between dates')
   }
 }
 
 const updateClientPrice = async (req: any, res: any): Promise<void> => {
   try {
     const { id, price } = req.body
-    const sales = await req.CollectionClient.findByIdAndUpdate(id, { $set: { salePrice: price } }, { new: true })
-    res.send(sales)
+    const updated = await req.CollectionClient.findByIdAndUpdate(id, { $set: { salePrice: price } }, { new: true })
+    res.send(updated)
   } catch (error: any) {
-    if (error.type === 400) {
-      res.status(400).json({ message: error.message })
-    } else {
-      res.status(500).json({ message: 'Error getting sales' })
+    sendError(res, error, 'Error updating client price')
+  }
+}
+
+const deleteChickenSale = async (req: any, res: any): Promise<void> => {
+  try {
+    const { id } = req.body
+    await req.CollectionClient.findByIdAndDelete(id)
+    res.send({ message: 'OK' })
+  } catch (error: any) {
+    sendError(res, error, 'Error updating client price')
+  }
+}
+
+const deleteEggSale = async (req: any, res: any): Promise<void> => {
+  try {
+    const { id } = req.body
+    await req.CollectionEggSale.findByIdAndDelete(id)
+    res.send({ message: 'OK' })
+  } catch (error: any) {
+    sendError(res, error, 'Error updating client price')
+  }
+}
+
+const deleteAction = async (req: any, res: any): Promise<void> => {
+  const session = await startSessionWithTransaction()
+  try {
+    const { id, action } = req.query
+
+    if (action === 'concentrado') {
+      const { typeConcentrate, amount, price, concentrateStore } = await req.CollectionBatchInfo.findById(id)
+
+      const store = await req.CollectionConcentrateStore.findById(concentrateStore)
+
+      await req.CollectionConcentrateStore.findByIdAndUpdate(
+        concentrateStore,
+        { $set: { amount: [...store.amount, amount], price: [...store.price, price], type: [...store.type, typeConcentrate] } },
+        { session }
+      )
+    } else if (action === 'venta') {
+      const { chikenSale } = await req.CollectionBatchInfo.findById(id)
+      await req.CollectionChickenSale.findByIdAndDelete(chikenSale, { session })
     }
+
+    await req.CollectionBatchInfo.findByIdAndDelete(id, { session })
+
+    await session.commitTransaction()
+    res.send({ message: 'OK' })
+  } catch (error: any) {
+    await session.abortTransaction()
+    sendError(res, error, 'Error deleting action')
+  } finally {
+    await session.endSession()
+  }
+}
+
+const createChikenShed = async (req: any, res: any): Promise<void> => {
+  try {
+    const { shedNumber, birdType } = req.body
+
+    const newShed = new req.CollectionShed({ shedNumber, birdType })
+    await newShed.save()
+    res.send({ message: 'OK' })
+  } catch (error: any) {
+    sendError(res, error, 'Error creating chicken shed')
+  }
+}
+
+const deleteChikenShed = async (req: any, res: any): Promise<void> => {
+  try {
+    const { id } = req.body
+    await req.CollectionShed.findByIdAndDelete(id)
+    res.send({ message: 'OK' })
+  } catch (error: any) {
+    sendError(res, error, 'Error deleting chicken shed')
+  }
+}
+
+const updateChikenShed = async (req: any, res: any): Promise<void> => {
+  try {
+    const { id } = req.params
+    const { shedNumber, birdType } = req.body
+
+    const updated = await req.CollectionShed.findByIdAndUpdate(id, { shedNumber, birdType }, { new: true })
+    res.send(updated)
+  } catch (error: any) {
+    sendError(res, error, 'Error updating chicken shed')
+  }
+}
+
+const createConcentrateStore = async (req: any, res: any): Promise<void> => {
+  try {
+    const { owner } = req.body
+
+    const newStore = new req.CollectionConcentrateStore({ owner, amount: [], price: [], type: [] })
+    await newStore.save()
+    res.send({ message: 'OK' })
+  } catch (error: any) {
+    sendError(res, error, 'Error creating concentrate store')
   }
 }
 
@@ -895,5 +742,12 @@ export default {
   getEggBill,
   getBatches,
   eggSalesBetween,
-  updateClientPrice
+  updateClientPrice,
+  deleteChickenSale,
+  deleteEggSale,
+  deleteAction,
+  createChikenShed,
+  deleteChikenShed,
+  updateChikenShed,
+  createConcentrateStore
 }

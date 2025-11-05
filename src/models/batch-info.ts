@@ -10,7 +10,12 @@ const getSchema = (company: string): Schema => {
             type: Schema.Types.ObjectId,
             ref: `batch_${company}`,
             default: null
-        },        
+        },
+        concentrateStore: {
+            type: Schema.Types.ObjectId,
+            ref: `concentrateStore_${company}`,
+            default: null
+        },
         chikenSale: {
             type: Schema.Types.ObjectId,
             ref: `chickenSale_${company}`,

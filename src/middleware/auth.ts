@@ -2,13 +2,6 @@ import jwt from 'jsonwebtoken'
 import config from '../config/config'
 import { getCollection } from '../models'
 
-const validateBranch = (branches, branch): boolean => {
-  const exist = branches.find((item: any) => {
-    return item._id.toString() === branch;
-  })
-  return exist
-}
-
 const validateToken = (roles: string[]) => {
   return (req: any, res: any, next: any) => {
     const token = req.headers.authorization
@@ -26,7 +19,7 @@ const validateToken = (roles: string[]) => {
       const company = decoded.company.name?decoded.company.name?.toLowerCase().replaceAll(' ','-'):''
       const userCollection = getCollection('user', company)
       const user = await userCollection.findById(decoded.id)
-      if (user.type !== 'owner' && !user.branch.find((item: any) => item._id == req.headers.branch)) {
+      if ((user.type !== 'owner' || user.type !== 'owner-farm') && !user.branch.find((item: any) => item._id == req.headers.branch)) {
         return res.status(401).json({
           message: 'Permissions error'
         })

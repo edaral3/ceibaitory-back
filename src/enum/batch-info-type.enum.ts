@@ -7,6 +7,7 @@ enum BatchInfoTypeEnum {
     DAILY_PRODUCTION = "produccion",
     VACCINE = "vacuna",
     SALE = "venta",
+    EXTRA = "extra",
 }
 
 export default BatchInfoTypeEnum;

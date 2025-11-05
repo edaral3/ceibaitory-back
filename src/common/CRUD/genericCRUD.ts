@@ -44,7 +44,7 @@ const updateItem = async (req: any, res: any): Promise<any> => {
     if (req.collectionName === 'user') {
       const user = await req.CollectionCrud.findById(req.params.id)
       if (user.type === 'owner' && req.body.type === 'owner') {
-        return res.status(400).json({ type: 'warning', message: 'No es posible actualizar el tipo de usuarios propietarios' })
+        //return res.status(400).json({ type: 'warning', message: 'No es posible actualizar el tipo de usuarios propietarios' })
       }
       req.body.pwd = bcrypt.hashSync(req.body.pwd, 10)
       data = await req.CollectionCrud.findByIdAndUpdate(req.params.id, {

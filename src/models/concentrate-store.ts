@@ -2,7 +2,6 @@ import { Schema } from 'mongoose'
 
 const getSchema = (): Schema => {
   const store = new Schema({
-
     amount: {
       type: [Number],
       required: true

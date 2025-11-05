@@ -37,7 +37,8 @@ const schema = Joi.object({
     .messages(messages.validationStringMessages),
   direction: Joi.allow(null),
   company: Joi.allow(null),
-  branch: Joi.allow(null)
+  branch: Joi.allow(null),
+  isFarm: Joi.allow()
   /* company: Joi.string()
     .optional()
     .allow(null)
