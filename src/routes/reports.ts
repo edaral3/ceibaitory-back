@@ -20,6 +20,8 @@ router.get('/top10ABC', validateToken(['owner']), setCollection('report'), repor
 
 router.get('/productsOutOfStockOfExpired', validateToken(['owner']), setCollection('report'), reports.productsOutOfStockOfExpired)
 
+router.get('/inventoryAlerts', validateToken(['owner']), setCollection('report'), reports.getInventoryAlerts)
+
 router.get('/sixMonthsReports', validateToken(['owner']), setCollection('report'), reports.sixMonthsReports)
 
 router.post('/getCreditInfo', validateToken(['owner', 'admin', 'vendedor', 'seller']), reports.getCreditInfo)

@@ -1,650 +1,274 @@
-// @ts-nocheck
-import { not } from "joi";
-import { jsPDF } from "jspdf";
-import "jspdf-autotable";
+import {
+  addMonths,
+  aggregateProducts,
+  buildCategoryDataset,
+  buildDayRange,
+  buildMonthRange,
+  buildRange,
+  categorizeProductsABC,
+  DateRange,
+  formatDayLabel,
+  isoDateKey,
+  ProductDocument,
+  productsExpiringSoon,
+  productsRunningOut,
+  roundCurrency,
+  SaleDocument,
+  SaleSummary,
+  summarizeSales,
+} from "../utils/reporting";
+import {
+  generateCreditPdf,
+  generateExpiringProductsPdf,
+  generateProductsOutOfStockPdf,
+  generateSalesPdf,
+} from "../utils/pdfReports";
 
-const getSalesBilledByDay = async (CollectionSale: any, date: string) => {
-  const start = new Date(date)
-  const finish = new Date(date)
-  finish.setHours(finish.getHours() + 24)
-  const sales = await CollectionSale.find({ canceled: false, bill: { $ne: null }, date: {$gte: start, $lte: finish}});
-  let total = 0;
-  for (const item of sales) {
-    total += item.total;
-  }
+const TIMEZONE_OFFSET = -6;
 
-  return Math.round(total * 100) / 100;
+const buildDateFilter = (range: DateRange, inclusiveEnd = false) => {
+  const comparator = inclusiveEnd ? "$lte" : "$lt";
+  return {
+    date: {
+      $gte: range.start,
+      [comparator]: range.end,
+    },
+  };
 };
 
-const getSalesByDay = async (CollectionSale: any, date: string) => {
-  const start = new Date(date)
-  const finish = new Date(date)
-  finish.setHours(finish.getHours() + 24)
-  const sales = await CollectionSale.find({ canceled: false, date: {$gte: start, $lte: finish}});
-  let total = 0;
-  for (const item of sales) {
-    total += item.total;
-  }
-
-  return Math.round(total * 100) / 100;
-};
-
-const getAmountSales = async (
+const fetchSales = async (
   CollectionSale: any,
-  date: string
-): Promise<any> => {
-  const start = new Date(date)
-  const finish = new Date(date)
-  finish.setHours(finish.getHours() + 24)
-  const sales = await CollectionSale.find({ canceled: false, date: {$gte: start, $lte: finish}});
-  return sales.length;
+  range: DateRange,
+  options?: { inclusiveEnd?: boolean; sort?: Record<string, 1 | -1> }
+): Promise<SaleDocument[]> => {
+  const dateFilter = buildDateFilter(range, options?.inclusiveEnd);
+  return CollectionSale.find({
+    canceled: false,
+    ...dateFilter,
+  })
+    .sort(options?.sort ?? { date: 1 })
+    .lean();
 };
 
-const getUtilityPerDay = async (
+const fetchProducts = async (
+  CollectionProduct: any,
+  sort: Record<string, 1 | -1> = { expirationDate: -1 }
+): Promise<ProductDocument[]> => {
+  return CollectionProduct.find().sort(sort).lean();
+};
+
+const getDailySnapshot = async (
   CollectionSale: any,
-  date: string
-): Promise<any> => {
-  const start = new Date(date)
-  const finish = new Date(date)
-  finish.setHours(finish.getHours() + 24)
-  const sales = await CollectionSale.find({ canceled: false, date: {$gte: start, $lte: finish}});
-  let total = 0;
-  for (const sale of sales) {
-    for (const item of sale.products) {
-      total += item.amount * item.salesPrice - item.amount * item.priceCost;
+  date: Date
+): Promise<SaleSummary> => {
+  const sales = await fetchSales(CollectionSale, buildDayRange(date));
+  return summarizeSales(sales);
+};
+
+const bucketSalesByDate = (sales: SaleDocument[]) => {
+  const bucket = new Map<string, SaleDocument[]>();
+  sales.forEach((sale) => {
+    const key = isoDateKey(sale.date);
+    if (!bucket.has(key)) {
+      bucket.set(key, []);
     }
+    bucket.get(key)!.push(sale);
+  });
+  return bucket;
+};
+
+const buildMonthlyDailySeries = async (
+  CollectionSale: any,
+  referenceDate: Date
+) => {
+  const sales = await fetchSales(
+    CollectionSale,
+    buildMonthRange(referenceDate)
+  );
+  const bucket = bucketSalesByDate(sales);
+  const sortedKeys = Array.from(bucket.keys()).sort();
+  const summaries = sortedKeys.map((key) => summarizeSales(bucket.get(key)!));
+  const labels = sortedKeys.map((key) => formatDayLabel(key));
+  const data1 = summaries.map((summary) => roundCurrency(summary.utilities));
+  const data2 = summaries.map((summary) => roundCurrency(summary.total));
+  return { labels, data1, data2 };
+};
+
+const formatMonthLabel = (date: Date) => {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${month}/${date.getFullYear()}`;
+};
+
+const buildYearlySeries = async (CollectionSale: any, referenceDate: Date) => {
+  const monthRange = buildMonthRange(referenceDate);
+  const range: DateRange = {
+    start: addMonths(monthRange.start, -11),
+    end: monthRange.end,
+  };
+  const sales = await fetchSales(CollectionSale, range);
+  const bucket = new Map<string, SaleDocument[]>();
+  sales.forEach((sale) => {
+    const key = formatMonthLabel(new Date(sale.date));
+    if (!bucket.has(key)) {
+      bucket.set(key, []);
+    }
+    bucket.get(key)!.push(sale);
+  });
+
+  const labels: string[] = [];
+  const revenue: number[] = [];
+  const totals: number[] = [];
+  for (let i = 0; i < 12; i++) {
+    const monthStart = addMonths(range.start, i);
+    const key = formatMonthLabel(monthStart);
+    labels.push(key);
+    const summary = summarizeSales(bucket.get(key) ?? []);
+    revenue.push(roundCurrency(summary.utilities));
+    totals.push(roundCurrency(summary.total));
   }
-  return Math.round(total * 100) / 100;
+
+  return { labels, revenue, sales: totals };
+};
+
+const buildGuatemalaRange = (startDate: string, endDate: string): DateRange => {
+  return buildRange(startDate, endDate, TIMEZONE_OFFSET);
+};
+
+const buildTrailingMonthsRange = (
+  referenceDate: Date,
+  months = 3
+): DateRange => {
+  const { end } = buildMonthRange(referenceDate);
+  const start = new Date(end);
+  start.setMonth(start.getMonth() - months);
+  start.setDate(1);
+  start.setHours(0, 0, 0, 0);
+  return { start, end };
+};
+
+const buildInventoryCsv = (products: any[]) => {
+  let csvResponse = "#,Nombre,Cantidad,Precio Costo\n";
+  products.forEach((item: any, index: number) => {
+    const name = String(item.name ?? "").replace(/,/g, "");
+    const existence = String(item.existence ?? "").replace(/,/g, "");
+    const priceCost = String(item.priceCost ?? "").replace(/,/g, "");
+    csvResponse += `${index + 1},${name},${existence},${priceCost}\n`;
+  });
+  return csvResponse;
 };
 
 const getInventoryExcel = async (req: any, res: any): Promise<void> => {
   try {
-    const products = await req.CollectionProduct.find().sort({ fecha: -1 });
-    let csvResponse = "#,Nombre,Cantidad,Precio Costo\n";
-
-    products.forEach((item, index) => {
-      csvResponse += `${index},${item.name.replaceAll(",", "")},${item.existence
-        .toString()
-        .replace(",", "")},${item.priceCost.toString().replace(",", "")}\n`;
-    });
-
+    const products = await req.CollectionProduct.find().sort({ fecha: -1 }).lean();
+    const csvResponse = buildInventoryCsv(products);
     res.send({ csv: csvResponse });
   } catch (error) {
     res.status(500).json({ message: "Error creando el reporte" });
   }
 };
 
-const getABC = (list: any): any => {
-  const listSorted = list.sort((a, b) => {
-    const worthA = a.salesPrice;
-    const worthB = b.priceCost;
-
-    if (worthA < worthB) {
-      return 1;
-    }
-    if (worthA > worthB) {
-      return -1;
-    }
-    return 0;
-  });
-
-  const A: any[] = [];
-  const B: any[] = [];
-  const C: any[] = [];
-
-  let index = 0;
-  listSorted.forEach((item) => {
-    const percent = (index / listSorted.length) * 100;
-    if (percent < 20) {
-      A.push(item.name);
-    } else if (percent < 50) {
-      B.push(item.name);
-    } else {
-      C.push(item.name);
-    }
-    index++;
-  });
-
-  return { A, B, C };
-};
-
-const filterByCategory = (itemsCategory, items): any => {
-  let newArray = items.filter((item) => {
-    return itemsCategory.includes(item.name);
-  });
-
-  newArray = newArray.sort((a, b) => {
-    return b.amount - a.amount;
-  });
-
-  newArray = newArray.slice(0, 9);
-
-  const labels = newArray.map((item) => item.name);
-  const listSeries = newArray.map((item) => item.amount);
-  return { labels, datasets: { label: "Productos", data: listSeries } };
-};
-
 const getTop10ABC = async (req: any, res: any): Promise<void> => {
-  const date = new Date( req.query.date);
-
-  const sales = await getListSaleMonth(req.CollectionSale,date);
   try {
-    const list: any[] = [];
-    let list2: any[] = [];
-    for (const item of sales) {
-      list.push(...item.products);
-    }
-
-    for (const item of list) {
-      if (list2.find((item2) => item.name === item2.name)) {
-        list2 = list2.map((item2) => {
-          if (item.name === item2.name) {
-            item2.amount += item.amount;
-            return item2;
-          }
-          return item2;
-        });
-      } else {
-        list2.push({
-          id: item._id,
-          name: item.name,
-          amount: item.amount,
-        });
-      }
-    }
-
-    const dataList = getABC(await getProducts(req.CollectionProduct));
-
-    const dataA = filterByCategory(dataList.A, [...list2]);
-    const dataB = filterByCategory(dataList.B, [...list2]);
-    const dataC = filterByCategory(dataList.C, [...list2]);
-
-    return res.send({ grapA: dataA, grapB: dataB, grapC: dataC });
-  } catch (error) {
-    return res.status(500).json({ message: "Error creando el reporte" });
-  }
-};
-
-const getDayReports = async (req: any, res: any): Promise<any> => {
-  const date = new Date(req.query.date);
-
-  const CollectionSale = req.CollectionSale;
-  try {
-    const data = {
-      dailyBillingSales: await getSalesBilledByDay(CollectionSale, date),
-      dailySales: await getSalesByDay(CollectionSale, date),
-      utilityByDay: await getUtilityPerDay(CollectionSale, date),
-      salesAmount: await getAmountSales(CollectionSale, date),
+    const date = new Date(req.query.date);
+    const range = buildTrailingMonthsRange(date, 3);
+    const sales = await fetchSales(req.CollectionSale, range);
+    const aggregatedProducts = aggregateProducts(sales);
+    const categories = categorizeProductsABC(aggregatedProducts);
+    const dataA = buildCategoryDataset(categories.A, aggregatedProducts);
+    const dataB = buildCategoryDataset(categories.B, aggregatedProducts);
+    const dataC = buildCategoryDataset(categories.C, aggregatedProducts);
+    const descriptions = {
+      A: "Productos tipo A concentran la mayor parte de los ingresos en los últimos 3 meses; requieren control estricto.",
+      B: "Productos tipo B aportan de forma intermedia; se gestionan con seguimiento regular.",
+      C: "Productos tipo C tienen bajo impacto en ingresos; conviene optimizar inventario y reposición.",
     };
-    return res.send(data);
-  } catch (error) {
-    return res.status(500).json({ message: "Error creando el reporte" });
-  }
-};
-
-const buildHeader = (companyName: string, typeReport: string): any => {
-  return {
-    body: [
-      [
-        {
-          content: companyName,
-          styles: {
-            halign: "left",
-            fontSize: 20,
-            textColor: "#ffffff",
-          },
-        },
-        {
-          content: typeReport,
-          styles: {
-            halign: "right",
-            fontSize: 20,
-            textColor: "#ffffff",
-          },
-        },
-      ],
-    ],
-    theme: "plain",
-    styles: {
-      fillColor: "#3366ff",
-    },
-  };
-};
-
-const buildDate = (startDate: string, endDate: string): any => {
-  return {
-    body: [
-      [
-        {
-          content: "Inicio: " + startDate + "\nFin: " + endDate,
-          styles: {
-            halign: "right",
-          },
-        },
-      ],
-    ],
-    theme: "plain",
-  };
-};
-
-const getListSaleRange = async (
-  CollectionSale: any,
-  startDate: string,
-  endDate: string
-): Promise<any> => {
-
-  const start = new Date(startDate);
-  start.setHours(start.getHours() - 6);
-  const end = new Date(endDate);
-  end.setHours(end.getHours() - 6);
-
-  const sales = await CollectionSale.find({
-    canceled: false,
-    date: { $gte: start, $lte: end }
-  });
-
-  return sales;
-};
-
-const getListSaleMonth = async (
-  CollectionSale: any,
-  date: Date
-): Promise<any> => {
-  const start = new Date(date.setDate(1))
-  date.setMonth(date.getMonth() + 1)
-  const finish = new Date(date)
-  const sales = await CollectionSale.find({ canceled: false, date: {$gte: start, $lte: finish} });
-
-  return sales;
-};
-
-const getProducts = async (CollectionProduct): Promise<any> => {
-  return await CollectionProduct.find().sort({ expirationDate: -1 });
-};
-
-const tableTemplateHead = [
-  "Producto",
-  "Cantidad",
-  "Precio",
-  "Utilidades",
-  "Total",
-];
-
-const getColorTble = (type: string): any => {
-  let color = "#7DCEA0";
-  switch (type) {
-    case "NF":
-      color = "#F4D03F";
-      break;
-    case "CF":
-      color = "#85C1E9";
-      break;
-  }
-
-  return {
-    theme: "striped",
-    headStyles: {
-      fillColor: color,
-    },
-  };
-};
-
-const buildCompleteBody = (doc: any, sales: any): any => {
-  let total = 0;
-  let totalUtilities = 0;
-  for (const sale of sales) {
-    const body: any[] = [];
-    let utilLocal = 0;
-    for (const item of sale.products) {
-      const utility = (item.salesPrice - item.priceCost) * item.amount;
-      totalUtilities += Math.round(utility * 100) / 100;
-      utilLocal += Math.round(utility * 100) / 100;
-      body.push([
-        item.name,
-        item.amount,
-        `Q${item.salesPrice}`,
-        `Q${Math.round(utility * 100) / 100}`,
-        `Q${item.salesPrice * item.amount}`,
-      ]);
-    }
-
-    body.push(["", "", "Total", `Q${utilLocal}`, `Q${sale.total}`]);
-    total += sale.total;
-    doc.autoTable({
-      body,
-      head: [[sale.name, sale.nit, "", "", "", ""], tableTemplateHead],
-      ...getColorTble(sale.nit),
+    const withDescription = (category: "A" | "B" | "C", data: any) => ({
+      description: descriptions[category],
+      ...data,
     });
+
+    res.send({
+      grapA: withDescription("A", dataA),
+      grapB: withDescription("B", dataB),
+      grapC: withDescription("C", dataC),
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error creando el reporte" });
   }
-
-  return { total, totalUtilities };
 };
 
-const buildSimpleBody = (doc, sales): any => {
-  let total = 0;
-  let totalUtilities = 0;
-  const products: any[] = [];
-  for (const sale of sales) {
-    for (const item of sale.products) {
-      const util = (item.salesPrice - item.priceCost) * item.amount;
-      totalUtilities += Math.round(util * 100) / 100;
-      const index = products.findIndex((product) => product.name === item.name);
-      if (index !== -1) {
-        products[index].amount += item.amount;
-        products[index].total += item.amount * item.salesPrice;
-        products[index].utilities += util;
-        products[index].salesPrices.add(item.salesPrice);
-      } else {
-        const salesPrices = new Set();
-        salesPrices.add(item.salesPrice);
-        products.push({
-          name: item.name,
-          amount: item.amount,
-          utilities: util,
-          salesPrices,
-          total: item.amount * item.salesPrice,
-        });
-      }
-    }
-    total += sale.total;
+const getDayReports = async (req: any, res: any): Promise<void> => {
+  try {
+    const date = new Date(req.query.date);
+    const snapshot = await getDailySnapshot(req.CollectionSale, date);
+    res.send({
+      dailyBillingSales: roundCurrency(snapshot.billedTotal),
+      dailySales: roundCurrency(snapshot.total),
+      utilityByDay: roundCurrency(snapshot.utilities),
+      salesAmount: snapshot.saleCount,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error creando el reporte" });
   }
-
-  const body: any[] = [];
-  for (const item of products) {
-    let salesPrices = "";
-    for (const price of item.salesPrices) {
-      salesPrices += price + " ";
-    }
-    body.push([
-      item.name,
-      item.amount,
-      `Q[ ${salesPrices}]`,
-      `Q${Math.round(item.utilities * 100) / 100}`,
-      `Q${Math.round(item.total * 100) / 100}`,
-    ]);
-  }
-  doc.autoTable({
-    body,
-    head: [tableTemplateHead],
-    ...getColorTble("CF"),
-  });
-  return { total, totalUtilities };
-};
-
-const createProductsOutOfStockReport = async (
-  CollectionProduct: any,
-  companyName: string
-): Promise<any> => {
-  const doc = new jsPDF();
-  doc.autoTable(buildHeader(companyName, "Reporte de productor por agotar"));
-  const data = await getProducts(CollectionProduct);
-  const body: any[] = [];
-  data.forEach((item, index) => {
-    if (item.existence - item.minExistence <= 0) {
-      body.push([
-        index + 1,
-        item.name,
-        item.existence,
-        item.minExistence,
-        `Q${item.salesPrice}`,
-        `Q${item.priceCost}`,
-      ]);
-    }
-  });
-  doc.autoTable({
-    body,
-    head: [
-      [
-        "#",
-        "Nombre",
-        "Cantidad",
-        "Cantidad minima",
-        "Precio costo",
-        "Precio venta",
-      ],
-    ],
-    ...getColorTble("CF"),
-  });
-  return doc.output("datauristring");
-};
-
-const createExpiringProducts = async (
-  CollectionProduct: any,
-  companyName: string
-): Promise<any> => {
-  const doc = new jsPDF();
-  doc.autoTable(buildHeader(companyName, "Reporte de productor por vencer"));
-  const data = await getProducts(CollectionProduct);
-  const body: any[] = [];
-  data.forEach((item: any, index: number) => {
-    if (item.expirationDate) {
-      const expirationDate = new Date(item.expirationDate);
-      const now = new Date(
-        new Date().toLocaleString("en-US", { timeZone: "America/Guatemala" })
-      );
-      const difference = Math.abs(expirationDate - now);
-      const days = difference / (1000 * 3600 * 24);
-      if (days < 60) {
-        body.push([
-          index + 1,
-          item.name,
-          item.existence,
-          item.expirationDate,
-          `Q${item.salesPrice}`,
-          `Q${item.priceCost}`,
-        ]);
-      }
-    }
-  });
-  doc.autoTable({
-    body,
-    head: [["#", "Nombre", "Cantidad", "Fecha vencimiento", "Precio costo"]],
-    ...getColorTble("CF"),
-  });
-  return doc.output("datauristring");
-};
-
-const getMoneyFormat = (number: any): string => {
-  return number.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-};
-
-const getTotals = (totals: any): any => {
-  return {
-    body: [
-      [
-        {
-          content: "Total:",
-          styles: {
-            halign: "right",
-          },
-        },
-        {
-          content: `Q${getMoneyFormat(Math.round(totals.total * 100) / 100)}`,
-          styles: {
-            halign: "right",
-          },
-        },
-      ],
-      [
-        {
-          content: "Total Utilidades:",
-          styles: {
-            halign: "right",
-          },
-        },
-        {
-          content: `Q${getMoneyFormat(
-            Math.round(totals.totalUtilities * 100) / 100
-          )}`,
-          styles: {
-            halign: "right",
-          },
-        },
-      ],
-    ],
-    theme: "plain",
-  };
-};
-
-const createSalesReport = async (
-  CollectionSale: any,
-  companyName: string,
-  startDate: any,
-  endDate: any,
-  typeReport: string
-): Promise<any> => {
-  const doc = new jsPDF();
-  doc.autoTable(buildHeader(companyName, "Reporte de ventas"));
-  doc.autoTable(buildDate(startDate, endDate));
-  const sales = await getListSaleRange(CollectionSale, startDate, endDate);
-  let totals: any;
-  if (typeReport === "simple") {
-    totals = buildSimpleBody(doc, sales);
-  } else if (typeReport === "detail") {
-    totals = buildCompleteBody(doc, sales);
-  }
-
-  doc.autoTable(getTotals(totals));
-
-  return doc.output("datauristring");
-};
-
-const formatDate = (date: string) => {
-  const dateSplit = date.split("-");
-  return `${dateSplit[2]}/${dateSplit[1]}/${dateSplit[0]}`;
 };
 
 const getSalesReport = async (req: any, res: any): Promise<void> => {
   const { startDate, endDate, typeReport } = req.query;
   try {
-    const pdf = await createSalesReport(
-      req.CollectionSale,
-      req.companyName,
+    const range = buildGuatemalaRange(startDate, endDate);
+    const sales = await fetchSales(req.CollectionSale, range, {
+      inclusiveEnd: true,
+    });
+    const pdf = generateSalesPdf({
+      companyName: req.companyName,
       startDate,
       endDate,
-      typeReport
-    );
+      typeReport,
+      sales,
+    });
     res.send({ pdf });
   } catch (error) {
-    return res.status(500).json({ message: "Error creando el reporte" });
+    res.status(500).json({ message: "Error creando el reporte" });
   }
 };
 
-const getProductsOutOfStockReport = async (
-  req: any,
-  res: any
-): Promise<void> => {
-  const pdf = await createProductsOutOfStockReport(
-    req.CollectionProduct,
-    req.companyName
-  );
-  res.send({ pdf });
+const getProductsOutOfStockReport = async (req: any, res: any): Promise<void> => {
+  try {
+    const products = await fetchProducts(req.CollectionProduct);
+    const pdf = generateProductsOutOfStockPdf(req.companyName, products);
+    res.send({ pdf });
+  } catch (error) {
+    res.status(500).json({ message: "Error creating report" });
+  }
 };
 
 const getExpiringProducts = async (req: any, res: any): Promise<void> => {
   try {
-    const pdf = await createExpiringProducts(
-      req.CollectionProduct,
-      req.companyName
-    );
+    const products = await fetchProducts(req.CollectionProduct);
+    const pdf = generateExpiringProductsPdf(req.companyName, products);
     res.send({ pdf });
   } catch (error) {
-
-    res.status(500).json({ message: `Error creating report` });
+    res.status(500).json({ message: "Error creating report" });
   }
-};
-
-const salesByMonth = async (CollectionSale: any, date: string) => {
-  const start = new Date(date.setDate(1))
-  date.setMonth(date.getMonth() + 1)
-  const finish = new Date(date)
-  const sales = await CollectionSale.find({ canceled: false,  date: {$gte: start, $lte: finish} }).sort({
-    date: 1,
-  });
-  const dates = [];
-  for (const item of sales) {
-    const saleDate = item.date.toISOString().split('T')[0]
-      if (!dates.includes(saleDate)) {
-        dates.push(saleDate);
-      }
-  }
-  return dates;
-};
-
-const salesByYear = async (CollectionSale: any, date: string) => {
-  const start = new Date(date)
-  start.setDate(1)
-  const finish = new Date(start)
-  finish.setMonth(finish.getMonth() + 1)
-  const data = { labels:[], revenue: [], sales: [] }
-
-  for (let i = 0 ; i < 12; i++) {
-    const sales = await CollectionSale.find({ canceled: false,  date: {$gte: start, $lte: finish} }).sort({
-      date: 1,
-    });
-
-    const splitDate = start.toISOString().split('-')
-    data.labels.push(`${splitDate[1]}/${splitDate[0]}`)
-    
-    let revenue = 0
-    let salesMoney = 0
-    for (const sale of sales) {
-      for (const item of sale.products) {
-        revenue += item.amount * item.salesPrice - item.amount * item.priceCost;
-      }
-      salesMoney += sale.total;
-    }
-    data.revenue.push(Math.round(revenue * 100) / 100)
-    data.sales.push(Math.round(salesMoney * 100) / 100)
-
-    finish.setMonth(finish.getMonth() - 1)
-    start.setMonth(start.getMonth() - 1)
-  }
-  data.labels = data.labels.reverse()
-  data.sales = data.sales.reverse()
-  data.sales = data.sales.reverse()
-  return data;
-};
-
-const salesByDay = async (CollectionSale: any, dates: any) => {
-  const labels = [];
-  const data1 = [];
-  const data2 = [];
-  for (const date of dates) {
-    const [year, month, day] = date.split("-")
-    const dateAux = new Date(date)
-
-    labels.push(`${day}/${month}/${year}`);
-    data1.push(await getUtilityPerDay(CollectionSale, dateAux));
-    data2.push(await getSalesByDay(CollectionSale, dateAux));
-  }
-  return { labels, data1, data2 };
 };
 
 const montlyReports = async (req: any, res: any): Promise<void> => {
   try {
-    const date = new Date(req.query.date)
-    const dates = await salesByMonth(req.CollectionSale, date);
-    const { labels, data1, data2 } = await salesByDay(
-      req.CollectionSale,
-      dates
-    );
-    return res.send({ labels, data1, data2 });
+    const date = new Date(req.query.date);
+    const data = await buildMonthlyDailySeries(req.CollectionSale, date);
+    res.send(data);
   } catch (error) {
-    return res.status(500).json({ message: "Error creando el reporte" });
+    res.status(500).json({ message: "Error creando el reporte" });
   }
 };
 
 const sixMonthsReports = async (req: any, res: any): Promise<void> => {
   try {
-    const date = new Date(req.query.date)
-    const data = await salesByYear(req.CollectionSale, date);
-    return res.send(data);
+    const date = new Date(req.query.date);
+    const data = await buildYearlySeries(req.CollectionSale, date);
+    res.send(data);
   } catch (error) {
-    return res.status(500).json({ message: "Error creando el reporte" });
+    res.status(500).json({ message: "Error creando el reporte" });
   }
 };
 
@@ -653,135 +277,45 @@ const productsOutOfStockOfExpired = async (
   res: any
 ): Promise<void> => {
   try {
-    const products = await req.CollectionProduct.find();
+    const products = await fetchProducts(req.CollectionProduct);
+    const productsOutOfStock = productsRunningOut(products);
+    const productsExpired = productsExpiringSoon(products, 30);
 
-    const productsOutOfStock = products.filter(
-      (item: any) => item.existence - item.minExistence <= 0
-    );
-
-    const now = new Date();
-    now.setHours(now.getHours() - 6);
-    now.setMonth(now.getMonth + 1);
-
-    const productsExpired = products.filter(
-      (item: any) => item.expirationDate > now
-    );
-    return res.send({
+    res.send({
       productsOutOfStock: productsOutOfStock.length,
       productsExpired: productsExpired.length,
     });
   } catch (error) {
-    return res.status(500).json({ message: "Error creando el reporte" });
+    res.status(500).json({ message: "Error creando el reporte" });
   }
 };
 
-const buildCreditInfo = (date: string, name: string, nit: string): any => {
-  return {
-    body: [
-      [
-        {
-          content:
-            "Fecha de compra: " + date + "\nNombre: " + name + "\nNIT: " + nit,
-          styles: {
-            halign: "right",
-          },
-        },
-      ],
-    ],
-    theme: "plain",
-  };
-};
-
-const buildCreditTittle = (tittle: string): any => {
-  return {
-    body: [
-      [
-        {
-          content: tittle,
-          styles: {
-            halign: "right",
-          },
-        },
-      ],
-    ],
-    theme: "plain",
-  };
-};
-
-const buildCreditTotals = (total: string, paid: string): any => {
-  return {
-    body: [
-      [
-        {
-          content: `Total: ${total} \n Total cancelado a la fecha: ${paid}`,
-          styles: {
-            halign: "right",
-          },
-        },
-      ],
-    ],
-    theme: "plain",
-  };
-};
-
-const createCreditReport = async (
-  companyName: string,
-  cerdit: any
-): Promise<any> => {
-  const doc = new jsPDF();
-  doc.autoTable(buildHeader(companyName, "Credito"));
-
-  const date = new Date(cerdit.date).toLocaleString("es-MX", {
-    timeZone: "America/Guatemala",
-  });
-
-  doc.autoTable(buildCreditInfo(date, cerdit.client.name, cerdit.client.nit));
-
-  const products = [];
-  const payments = [];
-  cerdit.products.forEach((item: any, index: number) => {
-    products.push([index + 1, item.name, item.amount, `Q${item.salesPrice}`]);
-  });
-  cerdit.payments.forEach((item: any, index: number) => {
-    payments.push([
-      index + 1,
-      `Q${item.amount}`,
-      new Date(item.date).toLocaleString("es-MX", {
-        timeZone: "America/Guatemala",
-      }),
-    ]);
-  });
-
-  doc.autoTable(buildCreditTittle("Pagos"));
-  doc.autoTable({
-    body: payments,
-    head: [["#", "Pago", "Fecha"]],
-    ...getColorTble("CF"),
-  });
-
-  doc.autoTable(buildCreditTittle("Productos"));
-  doc.autoTable({
-    body: products,
-    head: [["#", "Nombre", "Cantidad", "Precio venta"]],
-    ...getColorTble("CF"),
-  });
-
-  doc.autoTable(buildCreditTotals("Q" + cerdit.total, "Q" + cerdit.paid));
-
-  return doc.output("datauristring");
+const getInventoryAlerts = async (req: any, res: any): Promise<void> => {
+  try {
+    const products = await fetchProducts(req.CollectionProduct);
+    const productsOutOfStock = productsRunningOut(products);
+    const productsExpiring = productsExpiringSoon(products);
+    res.send({
+      productsOutOfStock,
+      productsExpiring,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error obteniendo los productos" });
+  }
 };
 
 const getCreditInfo = async (req: any, res: any): Promise<void> => {
   try {
-    const pdf = await createCreditReport(req.companyName, req.body.credit);
+    const pdf = generateCreditPdf(req.companyName, req.body.credit);
     res.send({ pdf });
   } catch (error) {
-    res.status(500).json({ message: `Error creating report` });
+    res.status(500).json({ message: "Error creating report" });
   }
 };
 
 export default {
   getCreditInfo,
+  getInventoryAlerts,
   getDayReports,
   getInventoryExcel,
   getSalesReport,
@@ -790,5 +324,5 @@ export default {
   getTop10ABC,
   montlyReports,
   productsOutOfStockOfExpired,
-  sixMonthsReports
+  sixMonthsReports,
 };
