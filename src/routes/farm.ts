@@ -63,4 +63,16 @@ router.post('/concentrate-store', validateToken(['owner', 'admin']), setCollecti
 
 router.delete('/delete-action', validateToken(['owner', 'admin']), setCollection('farm'), farmManagement.deleteAction)
 
+router.post('/concentrate-type', validateToken(['owner', 'admin']), setCollection('farm'), farmManagement.createConcentrateType)
+
+router.delete('/concentrate-type/:id', validateToken(['owner', 'admin']), setCollection('farm'), farmManagement.deleteConcentrateType)
+
+router.post('/egg-type', validateToken(['owner', 'admin']), setCollection('farm'), farmManagement.createEggType)
+
+router.delete('/egg-type/:id', validateToken(['owner', 'admin']), setCollection('farm'), farmManagement.deleteEggType)
+
+router.get('/concentrate-types', validateToken(['owner', 'admin', 'worker']), setCollection('farm'), farmManagement.getConcentrateTypes)
+
+router.get('/egg-types', validateToken(['owner', 'admin', 'worker']), setCollection('farm'), farmManagement.getEggTypes)
+
 export default router

@@ -57,6 +57,7 @@ const setCollection = (collectionName: string) => {
         req.CollectionClient = getCollection('client', companyName)
         req.CollectionEggSale = getCollection('eggSale', companyName)
         req.CollectionEggPrice = getCollection('eggPrice', companyName)
+        req.CollectionConcentrateType = getCollection('concentrateType', companyName)
         break
       default:
         req.CollectionSupplier = getCollection('supplier', companyName)

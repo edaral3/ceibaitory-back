@@ -3,6 +3,7 @@ import BatchInfoTypeEnum from '../../enum/batch-info-type.enum'
 import ConcentrateStoreInfoEnum from '../../enum/concentrate-store-info.enum'
 import PDFDocument from 'pdfkit'
 import 'pdfkit-table'
+import { get } from 'http'
 
 type TableColumn = {
   label: string
@@ -883,6 +884,70 @@ const createConcentrateStore = async (req: any, res: any): Promise<void> => {
   }
 }
 
+const createConcentrateType = async (req: any, res: any): Promise<void> => {
+  try {
+    const { name: type } = req.body
+
+    const newType = new req.CollectionConcentrateType({ name: type })
+    await newType.save()
+    res.send({ message: 'OK' })
+  }
+  catch (error: any) {
+    sendError(res, error, 'Error creating concentrate type')
+  }
+}
+
+const getConcentrateTypes = async (req: any, res: any): Promise<void> => {
+  try {
+    const types = await req.CollectionConcentrateType.find()
+    res.send(types)
+  } catch (error: any) {
+    sendError(res, error, 'Error getting concentrate types')
+  }
+}
+
+const deleteConcentrateType = async (req: any, res: any): Promise<void> => {
+  try {
+    const { id } = req.params
+    await req.CollectionConcentrateType.findByIdAndDelete(id)
+    res.send({ message: 'OK' })
+  } catch (error: any) {
+    sendError(res, error, 'Error deleting concentrate type')
+  }
+}
+
+const createEggType = async (req: any, res: any): Promise<void> => {
+  try {
+    const { name: type } = req.body
+
+    const newType = new req.CollectionEggPrice({ type, price: 0 })
+    await newType.save()
+    res.send({ message: 'OK' })
+  }
+  catch (error: any) {
+    sendError(res, error, 'Error creating egg type')
+  }
+}
+
+const getEggTypes = async (req: any, res: any): Promise<void> => {
+  try {
+    const types = await req.CollectionEggPrice.find()
+    res.send(types)
+  } catch (error: any) {
+    sendError(res, error, 'Error getting egg types')
+  }
+}
+
+const deleteEggType = async (req: any, res: any): Promise<void> => {
+  try {
+    const { id } = req.params
+    await req.CollectionEggPrice.findByIdAndDelete(id)
+    res.send({ message: 'OK' })
+  } catch (error: any) {
+    sendError(res, error, 'Error deleting egg type')
+  }
+}
+
 export default {
   makeAnAction,
   addConcentrate,
@@ -913,5 +978,11 @@ export default {
   createChikenShed,
   deleteChikenShed,
   updateChikenShed,
-  createConcentrateStore
+  createConcentrateStore,
+  createConcentrateType,
+  deleteConcentrateType,
+  createEggType,
+  deleteEggType,
+  getConcentrateTypes,
+  getEggTypes
 }
