@@ -5,7 +5,7 @@ import { validateToken } from '../middleware/auth'
 
 const router = express.Router()
 
-router.post('/', validateToken(['owner', 'admin', 'vendedor']), setCollection('product'), chat.chat)
+router.post('/', validateToken(['owner', 'admin', 'vendedor', 'seller']), setCollection('product'), chat.chat)
 
 
 export default router

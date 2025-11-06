@@ -6,14 +6,14 @@ import { validator } from '../middleware/bodyValidator'
 
 const router = express.Router()
 
-router.post('/', validateToken(['owner', 'admin', 'vendedor']), validator('sale'), setCollection('sale'), sale.create)
+router.post('/', validateToken(['owner', 'admin', 'vendedor', 'seller']), validator('sale'), setCollection('sale'), sale.create)
 
 router.delete('/:id', validateToken(['owner', 'admin' ]), setCollection('sale'), sale.cancel)
 
-router.get('/:id', validateToken(['owner', 'admin', 'vendedor']), setCollection('sale'), sale.getOne)
+router.get('/:id', validateToken(['owner', 'admin', 'vendedor', 'seller']), setCollection('sale'), sale.getOne)
 
-router.get('/', validateToken(['owner', 'admin', 'vendedor']), setCollection('sale'), sale.getAll)
+router.get('/', validateToken(['owner', 'admin', 'vendedor', 'seller']), setCollection('sale'), sale.getAll)
 
-router.get('/bill/:uuid', validateToken(['owner', 'admin', 'vendedor']), setCollection('sale'), sale.getBill)
+router.get('/bill/:uuid', validateToken(['owner', 'admin', 'vendedor', 'seller']), setCollection('sale'), sale.getBill)
 
 export default router

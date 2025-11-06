@@ -33,7 +33,8 @@ const login = async (req: any, res: any): Promise<any> => {
         user: user.user,
         company: { name: user.company.name, _id: user.company._id },
         branches,
-        roles: user.type
+        roles: user.type,
+        type: user.company.type
       }
 
       const jwToken = jwt.sign(JSON.stringify(newToken), config.secret)

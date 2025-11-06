@@ -21,6 +21,10 @@ const getSchema = (): Schema => {
     billingCompanyCredentials: {
       type: String,
       require: false
+    },
+    type: {
+      type: [String],
+      required: false
     }
   })
   return company

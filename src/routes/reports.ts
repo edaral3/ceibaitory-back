@@ -22,6 +22,6 @@ router.get('/productsOutOfStockOfExpired', validateToken(['owner']), setCollecti
 
 router.get('/sixMonthsReports', validateToken(['owner']), setCollection('report'), reports.sixMonthsReports)
 
-router.post('/getCreditInfo', validateToken(['owner', 'admin', 'vendedor']), reports.getCreditInfo)
+router.post('/getCreditInfo', validateToken(['owner', 'admin', 'vendedor', 'seller']), reports.getCreditInfo)
 
 export default router

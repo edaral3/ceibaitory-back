@@ -6,14 +6,14 @@ import { validator } from '../middleware/bodyValidator'
 
 const router = express.Router()
 
-router.post('/', validateToken(['owner','owner-farm']), validator('branch'), setCollection('branch'), branch.create)
+router.post('/', validateToken(['owner']), validator('branch'), setCollection('branch'), branch.create)
 
-router.put('/:id', validateToken(['owner','owner-farm']), validator('branch'), setCollection('branch'), branch.update)
+router.put('/:id', validateToken(['owner']), validator('branch'), setCollection('branch'), branch.update)
 
-router.delete('/:id', validateToken(['owner','owner-farm']), setCollection('branch'), branch.delete)
+router.delete('/:id', validateToken(['owner']), setCollection('branch'), branch.delete)
 
-router.get('/:id', validateToken(['owner', 'owner-farm']), setCollection('branch'), branch.getOne)
+router.get('/:id', validateToken(['owner']), setCollection('branch'), branch.getOne)
 
-router.get('/', validateToken(['owner', 'owner-farm']), setCollection('branch'), branch.getAll)
+router.get('/', validateToken(['owner']), setCollection('branch'), branch.getAll)
 
 export default router
