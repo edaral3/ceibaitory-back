@@ -2,7 +2,29 @@ import Mongoose, { type ClientSession } from 'mongoose'
 import BatchInfoTypeEnum from '../../enum/batch-info-type.enum'
 import ConcentrateStoreInfoEnum from '../../enum/concentrate-store-info.enum'
 import PDFDocument from 'pdfkit'
-import "pdfkit-table";
+import 'pdfkit-table'
+
+type TableColumn = {
+  label: string
+  width: number
+  align?: 'left' | 'center' | 'right'
+}
+
+type TableCellObject = {
+  value: string | number
+  colSpan?: number
+  align?: 'left' | 'center' | 'right'
+  bold?: boolean
+}
+
+type RowCell =
+  | string
+  | number
+  | null
+  | undefined
+  | TableCellObject
+
+type TableRow = RowCell[]
 
 // ---------- Helpers ------------------------------------------------------
 const sendError = (res: any, error: any, defaultMessage = 'Internal server error') => {
@@ -35,56 +57,163 @@ const formatTypeShort = (type?: string) => {
   return type
 }
 
+const formatCurrency = (value: number | undefined | null) => `Q${(Number(value) || 0).toFixed(2)}`
+
 const pipePdfToResponse = (res: any, doc: PDFDocument, fileName: string) => {
   res.setHeader('Content-Type', 'application/pdf')
   res.setHeader('Content-Disposition', `inline; filename=${fileName}`)
   doc.pipe(res)
 }
 
-const drawTableHeaders = (doc: PDFDocument, tableTop: number, itemHeight: number) => {
-  const draw = (x: number, width: number, label: string) => {
-    doc.rect(x, tableTop, width, itemHeight).stroke()
-    doc.font('Helvetica-Bold').fontSize(12).text(label, x + 10, tableTop + 5)
-  }
-  draw(5, 45, 'Tam')
-  draw(50, 30, 'Tipo')
-  draw(80, 30, 'Cant')
-  draw(110, 50, 'Precio')
-  draw(160, 85, 'Total')
+const drawTableHeaders = (doc: PDFDocument, tableTop: number, rowHeight: number, columns: TableColumn[]) => {
+  const startX = doc.page.margins.left
+  let currentX = startX
+
+  columns.forEach((column) => {
+    doc.save()
+    doc.lineWidth(1)
+    doc.rect(currentX, tableTop, column.width, rowHeight).fillAndStroke('#f5f5f5', '#d1d5db')
+    doc.font('Helvetica-Bold')
+      .fontSize(10)
+      .fillColor('#1f2937')
+      .text(column.label, currentX + 3, tableTop + (rowHeight - 10) / 2, {
+        width: column.width - 6,
+        align: column.align ?? 'left'
+      })
+    doc.restore()
+    currentX += column.width
+  })
+
+  doc.fillColor('#1f2937').strokeColor('#1f2937')
 }
 
-const drawRows = (doc: PDFDocument, rows: any[], tableTop: number, itemHeight: number) => {
+const drawRows = (doc: PDFDocument, rows: TableRow[], tableTop: number, rowHeight: number, columns: TableColumn[]) => {
+  const startX = doc.page.margins.left
+
   rows.forEach((row, rowIndex) => {
-    row.forEach((cell: any, colIndex: number) => {
-      let x = 0
-      const y = tableTop + (rowIndex + 1) * itemHeight
-      let width = 0
-      if (colIndex === 0) { x = 5; width = 45 }
-      else if (colIndex === 1) { x = 50; width = 30 }
-      else if (colIndex === 2) { x = 80; width = 30 }
-      else if (colIndex === 3) { x = 110; width = 50 }
-      else if (colIndex === 4) { x = 160; width = 85 }
-      doc.rect(x, y, width, itemHeight).stroke().fontSize(14).text(cell, x + 5, y + 5)
-    })
+    const y = tableTop + (rowIndex + 1) * rowHeight
+    const rowHasBold = row.some((cell) => typeof cell === 'object' && cell !== null && 'bold' in cell && Boolean((cell as TableCellObject).bold))
+    let currentX = startX
+    let colPointer = 0
+
+    while (colPointer < columns.length) {
+      const column = columns[colPointer]
+      const rawCell = row[colPointer]
+
+      if (rawCell === null || rawCell === undefined) {
+        currentX += column.width
+        colPointer += 1
+        continue
+      }
+
+      let cellValue: string | number = ''
+      let colSpan = 1
+      let cellAlign: 'left' | 'center' | 'right' = column.align ?? 'left'
+      let boldCell = false
+
+      if (typeof rawCell === 'object' && rawCell !== null && 'value' in rawCell) {
+        const cellObject = rawCell as TableCellObject
+        cellValue = cellObject.value ?? ''
+        colSpan = Math.max(1, cellObject.colSpan ?? 1)
+        cellAlign = cellObject.align ?? cellAlign
+        boldCell = Boolean(cellObject.bold)
+      } else {
+        cellValue = rawCell as string | number
+      }
+
+      const cellWidth = columns.slice(colPointer, colPointer + colSpan).reduce((acc, col) => acc + col.width, 0)
+
+      const highlightColor = rowHasBold ? '#eef2ff' : '#ffffff'
+      doc.save()
+      doc.lineWidth(1)
+      doc.rect(currentX, y, cellWidth, rowHeight).fillAndStroke(highlightColor, '#d1d5db')
+
+      const isBold = boldCell
+      const fontSize = isBold ? 11.5 : 10
+      const textValue = cellValue === null || cellValue === undefined ? '' : String(cellValue)
+      const textAlign = cellAlign
+
+      doc.font(isBold ? 'Helvetica-Bold' : 'Helvetica')
+        .fontSize(fontSize)
+        .fillColor(isBold ? '#1e3a8a' : '#1f2937')
+        .text(textValue, currentX + 3, y + (rowHeight - fontSize) / 2, {
+          width: cellWidth - 6,
+          align: textAlign,
+          ellipsis: true,
+          lineBreak: false
+        })
+
+      doc.restore()
+      currentX += cellWidth
+      colPointer += colSpan
+    }
   })
+
+  doc.fillColor('#1f2937').strokeColor('#1f2937')
 }
 
 // Generic small ticket helpers (used for both chicken and eggs) ----------------
 const writeTicketHeader = (doc: PDFDocument, title: string, id: string, dateText?: string) => {
-  doc.fontSize(20).text('Granja Aldana', { align: 'center' })
-  doc.moveDown(0.5)
-  doc.fontSize(17).text(`Ticket: ${id}`, { align: 'center' })
-  doc.moveDown(1)
-  if (dateText) doc.fontSize(17).text(`Fecha: ${dateText}`)
+  const left = doc.page.margins.left
+  const right = doc.page.width - doc.page.margins.right
+  const contentWidth = right - left
+  const headerTop = doc.y
+  const headerHeight = 56
+  const readableId = id ? `Ticket #${String(id).slice(-8)}` : ''
+
+  doc.save()
+  doc.roundedRect(left, headerTop, contentWidth, headerHeight, 10).fill('#1e3a8a')
+  doc.restore()
+
+  doc.fillColor('#f9fafb')
+    .font('Helvetica-Bold')
+    .fontSize(18)
+    .text(title, left, headerTop + 12, { width: contentWidth, align: 'center' })
+
+  doc.font('Helvetica')
+    .fontSize(9)
+    .text(readableId, left + 14, headerTop + 36, { width: contentWidth - 28 })
+
+  if (dateText) {
+    doc.text(`Fecha: ${dateText}`, left + 14, headerTop + 36, { width: contentWidth - 28, align: 'right' })
+  }
+
+  doc.strokeColor('#d1d5db')
+    .lineWidth(1)
+    .moveTo(left, headerTop + headerHeight + 6)
+    .lineTo(right, headerTop + headerHeight + 6)
+    .stroke()
+
+  doc.y = headerTop + headerHeight + 16
+  doc.fillColor('#1f2937').strokeColor('#1f2937')
 }
 
 const writeTicketFooter = (doc: PDFDocument, totalText: string) => {
+  const left = doc.page.margins.left
+  const right = doc.page.width - doc.page.margins.right
+  const contentWidth = right - left
+
   doc.moveDown(1)
-  doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke()
-  doc.moveDown(0.5)
-  doc.fontSize(19).text('TOTAL', { continued: true }).text(` ${totalText}`, { align: 'right' })
+  doc.strokeColor('#d1d5db')
+    .lineWidth(1)
+    .moveTo(left, doc.y)
+    .lineTo(right, doc.y)
+    .stroke()
+
+  doc.moveDown(0.7)
+  doc.fillColor('#111827')
+    .font('Helvetica-Bold')
+    .fontSize(15)
+    .text('Total a pagar', left, doc.y, { width: contentWidth / 2 })
+  doc.text(totalText, left, doc.y, { width: contentWidth, align: 'right' })
+
   doc.moveDown(1)
-  doc.fontSize(17).text('Gracias por la compra!', { align: 'center' })
+  doc.fillColor('#4b5563')
+    .font('Helvetica')
+    .fontSize(12)
+    .text('Gracias por la compra!', left, doc.y, { width: contentWidth, align: 'center' })
+
+  doc.fillColor('#1f2937').strokeColor('#1f2937')
 }
 
 // ---------- Actions ------------------------------------------------------
@@ -381,7 +510,10 @@ const chickenSale = async (req: any, res: any): Promise<void> => {
     }
 
     // PDF generation (shared helper)
-    generateChickenPdf(res, chickenSale, saleDate)
+    const eggSaleDate = new Date(chickenSale.date)
+    eggSaleDate.setHours(eggSaleDate.getHours() + 6) // Ajustar zona horaria si es necesario
+    const saleDateFormatted = eggSaleDate.toLocaleDateString('es-GT')
+    generateChickenPdf(res, chickenSale, saleDateFormatted)
 
     await session.commitTransaction()
   } catch (error: any) {
@@ -398,7 +530,7 @@ const generateChickenPdf = (res: any, chickenSale: any, saleDate: string) => {
 
   // Header
   writeTicketHeader(doc, 'Granja Aldana', chickenSale._id, saleDate)
-  doc.fontSize(17).text(`Cliente: ${chickenSale.client ?? ''}`)
+  doc.fontSize(17).text(`Cliente: ${chickenSale.client?.name ?? ''}`)
 
   doc.moveDown(1.5)
   doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke()
@@ -438,7 +570,10 @@ const getChickenBill = async (req: any, res: any): Promise<void> => {
     const chickenSale = await req.CollectionChickenSale.findById(billId).populate('client')
     if (!chickenSale) throw { type: 400, message: 'Bill not found' }
 
-    generateChickenPdf(res, chickenSale, new Date(chickenSale.date).toISOString().split('T')[0])
+    const eggSaleDate = new Date(chickenSale.date)
+    eggSaleDate.setHours(eggSaleDate.getHours() + 6) // Ajustar zona horaria si es necesario
+    const saleDateFormatted = eggSaleDate.toLocaleDateString('es-GT')
+    generateChickenPdf(res, chickenSale, saleDateFormatted)
   } catch (error: any) {
     sendError(res, error, 'Error getting bill')
   }
@@ -478,39 +613,61 @@ const getUsers = async (req: any, res: any): Promise<void> => {
 
 // ---------- Egg sale ----------------------------------------------------
 const buildEggRows = (eggSale: any) => {
-  const rows: any[] = []
+  const rows: TableRow[] = []
   for (let i = 0; i < eggSale.size.length; i++) {
     const s = formatSizeShort(eggSale.size[i])
     const t = formatTypeShort(eggSale.type[i])
     let unitPrice = eggSale.price[i]
     let rowTotal = 0
-    if (eggSale.type[i].toLowerCase() !== 'caja') {
+    const isBox = eggSale.type[i].toLowerCase() === 'caja'
+    if (!isBox) {
       unitPrice = unitPrice / 12
       rowTotal = (eggSale.amount[i] * eggSale.price[i]) / 12
     } else {
       rowTotal = eggSale.amount[i] * eggSale.price[i]
     }
-    rows.push([s, t, `${eggSale.amount[i]}`, `${unitPrice.toFixed(2)}`, `${rowTotal.toFixed(2)}`])
+    rows.push([
+      s,
+      t,
+      `${eggSale.amount[i]}`,
+      formatCurrency(unitPrice),
+      formatCurrency(rowTotal)
+    ])
   }
-  rows.push(['', '', '', '', ''])
-  rows.push(['', '', '', 'Total', `${(eggSale.total ?? 0).toFixed(2)}`])
+  rows.push([
+    { value: 'Total', bold: true, align: 'left' },
+    '',
+    '',
+    { value: formatCurrency(eggSale.total), bold: true, align: 'right', colSpan: 2 }
+  ])
   return rows
 }
 
 const generateEggPdf = (res: any, eggSale: any, saleDate: string) => {
-  const doc = new PDFDocument({ size: [250, 450], margin: 12 })
+  const doc = new PDFDocument({ size: [250, 480], margin: 14 })
   pipePdfToResponse(res, doc, `ticket-${eggSale._id}.pdf`)
 
   writeTicketHeader(doc, 'Granja Aldana', eggSale._id, saleDate)
-  doc.moveDown(0.1)
-  doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke()
+  doc.font('Helvetica-Bold').fontSize(12)
+    .fillColor('#1f2937')
+    .text('Detalle · Resumen de artículos')
+  doc.moveDown(0.6)
 
-  const tableTop = 140
-  const itemHeight = 20
-  drawTableHeaders(doc, tableTop, itemHeight)
-
+  const columns: TableColumn[] = [
+    { label: 'Tam', width: 38, align: 'center' },
+    { label: 'Tipo', width: 36, align: 'center' },
+    { label: 'Cant.', width: 32, align: 'right' },
+    { label: 'Precio', width: 56, align: 'right' },
+    { label: 'Importe', width: 58, align: 'right' }
+  ]
+  const rowHeight = 22
+  const tableTop = doc.y
   const rows = buildEggRows(eggSale)
-  drawRows(doc, rows, tableTop, itemHeight)
+  drawTableHeaders(doc, tableTop, rowHeight, columns)
+  drawRows(doc, rows, tableTop, rowHeight, columns)
+
+  const tableHeight = rowHeight * (rows.length + 1)
+  doc.y = tableTop + tableHeight + 14
 
   doc.end()
 }
@@ -542,7 +699,10 @@ const eggSale = async (req: any, res: any): Promise<void> => {
     const eggSale = new req.CollectionEggSale({ size, type, amount, price, total, date: saleDate })
     await eggSale.save()
 
-    generateEggPdf(res, eggSale, saleDate)
+    // Formatear fecha sin cambiar la fecha original
+    const date = new Date(saleDate + 'T00:00:00')
+    const saleDateFormatted = date.toLocaleDateString('es-GT')
+    generateEggPdf(res, eggSale, saleDateFormatted)
   } catch (error: any) {
     sendError(res, error, 'Error creating egg sale')
   }
@@ -594,7 +754,11 @@ const getEggBill = async (req: any, res: any): Promise<void> => {
     const eggSale = await req.CollectionEggSale.findById(billId)
     if (!eggSale) throw { type: 400, message: 'Bill not found' }
 
-    generateEggPdf(res, eggSale, new Date(eggSale.date).toISOString().split('T')[0])
+    // Formatear fecha sin cambiar la fecha original
+    const eggSaleDate = new Date(eggSale.date)
+    eggSaleDate.setHours(eggSaleDate.getHours() + 6) // Ajustar zona horaria si es necesario
+    const saleDateFormatted = eggSaleDate.toLocaleDateString('es-GT')
+    generateEggPdf(res, eggSale, saleDateFormatted)
   } catch (error: any) {
     sendError(res, error, 'Error getting bill')
   }

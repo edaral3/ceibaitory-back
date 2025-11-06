@@ -3,9 +3,9 @@ import mongoose from 'mongoose'
 import mongooseSequence from 'mongoose-sequence'
 import BirdTypeEnum from '../enum/bird-type.enum';
 
-const AutoIncrement = mongooseSequence(mongoose);
-
 const getSchema = (company: string): Schema => {
+    const AutoIncrement = mongooseSequence(mongoose);
+    
     const batch = new Schema({
         batchId: {
             type: Number,
@@ -53,7 +53,10 @@ const getSchema = (company: string): Schema => {
         }
     })
 
-    batch.plugin(AutoIncrement, { inc_field: 'batchId' });
+    batch.plugin(AutoIncrement, { 
+        inc_field: 'batchId',
+        id: `batch_${company}_seq`
+    });
 
     return batch
 }

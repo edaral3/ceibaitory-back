@@ -2,9 +2,9 @@ import { Schema } from 'mongoose'
 import mongoose from 'mongoose'
 import mongooseSequence from 'mongoose-sequence'
 
-const AutoIncrement = mongooseSequence(mongoose);
-
 const getSchema = (company: string): Schema => {
+    const AutoIncrement = mongooseSequence(mongoose);
+    
     const batchInfo = new Schema({
         batchId: {
             type: Schema.Types.ObjectId,
@@ -54,7 +54,11 @@ const getSchema = (company: string): Schema => {
             default: Date.now
         }
     })
-    batchInfo.plugin(AutoIncrement, { inc_field: 'batchInfoId' });
+    
+    batchInfo.plugin(AutoIncrement, { 
+        inc_field: 'batchInfoId',
+        id: `batchInfo_${company}_seq`
+    });
 
     return batchInfo
 }
