@@ -6,9 +6,11 @@ import {
   buildMonthRange,
   buildRange,
   categorizeProductsABC,
+  calculateSaleUtility,
   DateRange,
   formatDayLabel,
   isoDateKey,
+  linearRegressionForecast,
   ProductDocument,
   productsExpiringSoon,
   productsRunningOut,
@@ -25,6 +27,29 @@ import {
 } from "../utils/pdfReports";
 
 const TIMEZONE_OFFSET = -6;
+const DEFAULT_PREDICTION_MONTHS = 6;
+const MIN_PREDICTION_MONTHS = 3;
+const MAX_PREDICTION_MONTHS = 18;
+
+const clampPredictionMonths = (value?: any): number => {
+  const parsed = Number(value);
+  if (Number.isFinite(parsed)) {
+    return Math.min(
+      Math.max(Math.floor(parsed), MIN_PREDICTION_MONTHS),
+      MAX_PREDICTION_MONTHS
+    );
+  }
+  return DEFAULT_PREDICTION_MONTHS;
+};
+
+const roundValue = (value: number, decimals = 2): number => {
+  const factor = Math.pow(10, decimals);
+  return Math.round(value * factor) / factor;
+};
+
+const monthKeyFromDate = (value: Date | string): string => {
+  return isoDateKey(value).slice(0, 7);
+};
 
 const buildDateFilter = (range: DateRange, inclusiveEnd = false) => {
   const comparator = inclusiveEnd ? "$lte" : "$lt";
@@ -97,6 +122,38 @@ const buildMonthlyDailySeries = async (
 const formatMonthLabel = (date: Date) => {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   return `${month}/${date.getFullYear()}`;
+};
+
+interface MonthBucket extends DateRange {
+  key: string;
+  label: string;
+}
+
+const buildHistoricalBuckets = (
+  referenceDate: Date,
+  months: number
+): { buckets: MonthBucket[]; range: DateRange } => {
+  const { start } = buildMonthRange(referenceDate);
+  const buckets: MonthBucket[] = [];
+  for (let i = months; i >= 1; i--) {
+    const bucketStart = addMonths(start, -i);
+    const bucketEnd = addMonths(bucketStart, 1);
+    buckets.push({
+      key: monthKeyFromDate(bucketStart),
+      label: formatMonthLabel(bucketStart),
+      start: bucketStart,
+      end: bucketEnd,
+    });
+  }
+
+  if (buckets.length === 0) {
+    return { buckets, range: { start, end: start } };
+  }
+
+  return {
+    buckets,
+    range: { start: buckets[0].start, end: buckets[buckets.length - 1].end },
+  };
 };
 
 const buildYearlySeries = async (CollectionSale: any, referenceDate: Date) => {
@@ -304,6 +361,115 @@ const getInventoryAlerts = async (req: any, res: any): Promise<void> => {
   }
 };
 
+const buildPredictionMetadata = (buckets: MonthBucket[]) => {
+  if (buckets.length === 0) {
+    const now = new Date();
+    return {
+      labels: [],
+      nextMonth: {
+        key: monthKeyFromDate(now),
+        label: formatMonthLabel(now),
+      },
+    };
+  }
+  const labels = buckets.map((bucket) => bucket.label);
+  const nextMonthStart = buckets[buckets.length - 1].end;
+  return {
+    labels,
+    nextMonth: {
+      key: monthKeyFromDate(nextMonthStart),
+      label: formatMonthLabel(nextMonthStart),
+    },
+  };
+};
+
+const predictProductDemand = async (req: any, res: any): Promise<void> => {
+  try {
+    const referenceDate = req.query.date ? new Date(req.query.date) : new Date();
+    const months = clampPredictionMonths(req.query.months);
+    const { buckets, range } = buildHistoricalBuckets(referenceDate, months);
+    const sales = await fetchSales(req.CollectionSale, range, { sort: { date: 1 } });
+    const bucketIndex = new Map(buckets.map((bucket, index) => [bucket.key, index]));
+    const seriesMap = new Map<string, number[]>();
+
+    sales.forEach((sale) => {
+      const key = monthKeyFromDate(sale.date);
+      const index = bucketIndex.get(key);
+      if (index === undefined) {
+        return;
+      }
+      sale.products?.forEach((product) => {
+        if (!seriesMap.has(product.name)) {
+          seriesMap.set(product.name, new Array(buckets.length).fill(0));
+        }
+        seriesMap.get(product.name)![index] += product.amount;
+      });
+    });
+
+    const metadata = buildPredictionMetadata(buckets);
+    const products = Array.from(seriesMap.entries())
+      .map(([name, history]) => {
+        const prediction = linearRegressionForecast(history);
+        return {
+          product: name,
+          predictedAmount: roundValue(prediction),
+          history: history.map((value, idx) => ({
+            label: metadata.labels[idx] ?? "",
+            value: roundValue(value),
+          })),
+        };
+      })
+      .filter(
+        (item) =>
+          item.predictedAmount > 0 ||
+          item.history.some((point) => point.value > 0)
+      )
+      .sort((a, b) => b.predictedAmount - a.predictedAmount)
+      .slice(0, 30);
+
+    res.send({
+      monthsAnalyzed: buckets.length,
+      ...metadata,
+      products,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error generando la predicción" });
+  }
+};
+
+const predictMonthlyProfit = async (req: any, res: any): Promise<void> => {
+  try {
+    const referenceDate = req.query.date ? new Date(req.query.date) : new Date();
+    const months = clampPredictionMonths(req.query.months);
+    const { buckets, range } = buildHistoricalBuckets(referenceDate, months);
+    const sales = await fetchSales(req.CollectionSale, range, { sort: { date: 1 } });
+    const bucketIndex = new Map(buckets.map((bucket, index) => [bucket.key, index]));
+    const utilities = new Array(buckets.length).fill(0);
+
+    sales.forEach((sale) => {
+      const key = monthKeyFromDate(sale.date);
+      const index = bucketIndex.get(key);
+      if (index === undefined) {
+        return;
+      }
+      utilities[index] += calculateSaleUtility(sale);
+    });
+
+    const metadata = buildPredictionMetadata(buckets);
+    const history = utilities.map((value) => roundValue(value));
+    const prediction = roundValue(linearRegressionForecast(utilities));
+
+    res.send({
+      monthsAnalyzed: buckets.length,
+      ...metadata,
+      history,
+      prediction,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error generando la predicción" });
+  }
+};
+
 const getCreditInfo = async (req: any, res: any): Promise<void> => {
   try {
     const pdf = generateCreditPdf(req.companyName, req.body.credit);
@@ -324,5 +490,7 @@ export default {
   getTop10ABC,
   montlyReports,
   productsOutOfStockOfExpired,
+  predictMonthlyProfit,
+  predictProductDemand,
   sixMonthsReports,
 };

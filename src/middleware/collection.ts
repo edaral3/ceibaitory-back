@@ -11,7 +11,11 @@ const setCollection = (collectionName: string) => {
     if(companyName){
       companyName = req.companyName.trim().toLowerCase().replaceAll(' ','-')
     }
-    req.collectionName = collectionName === "userOwner" ? "user" : collectionName
+    const normalizedCollectionName = (() => {
+      if (collectionName === "userOwner") return "user";
+      return collectionName;
+    })();
+    req.collectionName = normalizedCollectionName;
 
     if (collectionName !== 'report' && collectionName !== 'farm'&& companyName)
       req.CollectionCrud = getCollection(req.collectionName, companyName)
@@ -58,6 +62,13 @@ const setCollection = (collectionName: string) => {
         req.CollectionEggSale = getCollection('eggSale', companyName)
         req.CollectionEggPrice = getCollection('eggPrice', companyName)
         req.CollectionConcentrateType = getCollection('concentrateType', companyName)
+        break
+      case 'store':
+      case 'storeItem':
+        req.CollectionSupplier = getCollection('supplier', companyName)
+        req.CollectionStoreItem = getCollection('storeItem', companyName)
+        req.CollectionStore = getCollection('store', companyName)
+        req.CollectionProduct = getCollection('product', companyName)
         break
       default:
         req.CollectionSupplier = getCollection('supplier', companyName)

@@ -8,6 +8,7 @@ import sale from './src/routes/sale'
 import purchase from './src/routes/purchase'
 import client from './src/routes/client'
 import store from './src/routes/store'
+import storeItems from './src/routes/store-items'
 import branch from './src/routes/branch'
 import user from './src/routes/user'
 import supplier from './src/routes/supplier'
@@ -58,6 +59,7 @@ app.use('/login', autenticacion)
 app.use('/reports', reports)
 app.use('/chat', chat)
 app.use('/farm', farm)
+app.use('/store-items', storeItems)
 
 const PORT = process.env.PORT ?? '3000'
 app.set('port', PORT)

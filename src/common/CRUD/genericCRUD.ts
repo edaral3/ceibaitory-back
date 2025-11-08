@@ -95,6 +95,8 @@ const getAllItems = async (req: any, res: any): Promise<any> => {
       items = await req.CollectionCrud.find({ company: req.company }, '-pwd').populate('branch')
     } else if (req.collectionName === 'branch') {
       items = await req.CollectionCrud.find({ company: req.company })
+    } else if (req.collectionName === 'storeItem') {
+      items = await req.CollectionCrud.find({ company: req.company }).populate('productId', 'name')
     } else {
       items = await req.CollectionCrud.find({ branch: req.branch })
     }

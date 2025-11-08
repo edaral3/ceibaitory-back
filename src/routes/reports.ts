@@ -24,6 +24,10 @@ router.get('/inventoryAlerts', validateToken(['owner']), setCollection('report')
 
 router.get('/sixMonthsReports', validateToken(['owner']), setCollection('report'), reports.sixMonthsReports)
 
+router.get('/predict/productDemand', validateToken(['owner']), setCollection('report'), reports.predictProductDemand)
+
+router.get('/predict/monthlyProfit', validateToken(['owner']), setCollection('report'), reports.predictMonthlyProfit)
+
 router.post('/getCreditInfo', validateToken(['owner', 'admin', 'vendedor', 'seller']), reports.getCreditInfo)
 
 export default router

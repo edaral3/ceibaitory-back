@@ -134,7 +134,7 @@ export const formatMoney = (value: number): string => {
   });
 };
 
-const getProductUtility = (product: SaleProduct): number => {
+export const getProductUtility = (product: SaleProduct): number => {
   return (product.salesPrice - product.priceCost) * product.amount;
 };
 
@@ -273,4 +273,36 @@ export const productsExpiringSoon = (
     const expirationDate = new Date(item.expirationDate);
     return expirationDate <= threshold;
   });
+};
+
+export const calculateSaleUtility = (sale: SaleDocument): number => {
+  return (
+    sale.products?.reduce((total, product) => total + getProductUtility(product), 0) ?? 0
+  );
+};
+
+export const linearRegressionForecast = (series: number[]): number => {
+  const values = series.map((value) => (Number.isFinite(value) ? Number(value) : 0));
+  const n = values.length;
+  if (n === 0) {
+    return 0;
+  }
+  if (n === 1) {
+    return Math.max(0, values[0]);
+  }
+  const meanX = (n - 1) / 2;
+  const meanY = values.reduce((sum, value) => sum + value, 0) / n;
+
+  let numerator = 0;
+  let denominator = 0;
+  values.forEach((value, index) => {
+    const diffX = index - meanX;
+    numerator += diffX * (value - meanY);
+    denominator += diffX * diffX;
+  });
+
+  const slope = denominator === 0 ? 0 : numerator / denominator;
+  const intercept = meanY - slope * meanX;
+  const prediction = intercept + slope * n;
+  return Math.max(0, prediction);
 };
