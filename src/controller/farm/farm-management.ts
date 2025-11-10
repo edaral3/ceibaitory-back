@@ -3,7 +3,6 @@ import BatchInfoTypeEnum from '../../enum/batch-info-type.enum'
 import ConcentrateStoreInfoEnum from '../../enum/concentrate-store-info.enum'
 import PDFDocument from 'pdfkit'
 import 'pdfkit-table'
-import { get } from 'http'
 
 type TableColumn = {
   label: string

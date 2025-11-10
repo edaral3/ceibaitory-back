@@ -69,6 +69,8 @@ const setCollection = (collectionName: string) => {
         req.CollectionStoreItem = getCollection('storeItem', companyName)
         req.CollectionStore = getCollection('store', companyName)
         req.CollectionProduct = getCollection('product', companyName)
+        req.CollectionStoreHistory = getCollection('storeHistory', companyName)
+        req.CollectionBranch = getCollection('branch', companyName)
         break
       default:
         req.CollectionSupplier = getCollection('supplier', companyName)

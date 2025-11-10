@@ -20,6 +20,7 @@ import eggPrice from './egg-price'
 import concentrateType from './concentrate-type'
 import store from './store'
 import storeItem from './store-items'
+import storeHistory from './store-history'
 
 const models = {
   client,
@@ -41,7 +42,8 @@ const models = {
   eggPrice,
   concentrateType,
   store,
-  storeItem
+  storeItem,
+  storeHistory
 }
 
 const getCollection = (collectionName: string, companyName: string): any => {
