@@ -32,7 +32,9 @@ const createSale = async (req: any, res: any): Promise<void> => {
     await updateProduct(req.CollectionProduct, products, session)
     let newBill: any = null
 
-    if (req.body.clientNit && req.body.clientNit !== '') {
+    const company = await req.CollectionCompany.findById(req.company)
+
+    if (req.body.clientNit && req.body.clientNit !== '' && company.billingCompanyName) {
       if (req.body.clientNit.toLowerCase() === 'cf') {
         req.body.clientNit = 'CF'
         //req.body.direction = 'ciudad'

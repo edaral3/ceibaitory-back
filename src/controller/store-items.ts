@@ -273,7 +273,7 @@ const moveItemsToProducts = async (req: any, res: Response): Promise<void> => {
 
 const getStoreHistory = async (req: any, res: Response): Promise<void> => {
   try {
-    const storeHistory = await req.CollectionStoreHistory.find().limit(100).populate('products', 'name _id').populate('ubication').populate('destinyUbication').populate('branch', 'name _id').lean();
+    const storeHistory = await req.CollectionStoreHistory.find().sort({ createdAt: -1 }).limit(100).populate('products', 'name _id').populate('ubication').populate('destinyUbication').populate('branch', 'name _id').lean();
     if (!storeHistory) {
       res.status(404).json({ message: "Bodega no encontrada" });
       return;
