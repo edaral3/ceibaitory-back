@@ -82,6 +82,149 @@ const fetchProducts = async (
   return CollectionProduct.find().sort(sort).lean();
 };
 
+const getStoreDisplayName = (store: any): string => {
+  return store?.name ?? store?.ubication ?? "Bodega";
+};
+
+const toObjectIdString = (value: any): string | undefined => {
+  if (!value) {
+    return undefined;
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value.toString === "function") {
+    return value.toString();
+  }
+  return undefined;
+};
+
+const buildProductsWithStoreReportData = async (
+  CollectionProduct: any,
+  CollectionStore: any,
+  CollectionStoreItem: any
+) => {
+  const [products, stores] = await Promise.all([
+    fetchProducts(CollectionProduct),
+    CollectionStore ? CollectionStore.find().lean() : [],
+  ]);
+  const productIds = products
+    .map((product: any) => toObjectIdString(product._id))
+    .filter((id): id is string => Boolean(id));
+
+  let storeItems: any[] = [];
+  if (CollectionStoreItem && productIds.length > 0) {
+    storeItems = await CollectionStoreItem.find({
+      productId: { $in: productIds },
+    }).lean();
+  }
+
+  const amountsByProduct = new Map<string, Map<string, number>>();
+  storeItems.forEach((item: any) => {
+    const productId = toObjectIdString(item.productId);
+    const storeId = toObjectIdString(item.ubication);
+    if (!productId || !storeId) {
+      return;
+    }
+    if (!amountsByProduct.has(productId)) {
+      amountsByProduct.set(productId, new Map());
+    }
+    amountsByProduct.get(productId)!.set(storeId, item.amount ?? 0);
+  });
+
+  const decoratedProducts = products.map((product: any) => {
+    const productId = toObjectIdString(product._id);
+    const productStoreMap = productId
+      ? amountsByProduct.get(productId)
+      : undefined;
+    const storeAmounts = stores.map((store: any) => {
+      const storeId = toObjectIdString(store._id);
+      const amount =
+        (storeId && productStoreMap && productStoreMap.get(storeId)) ?? 0;
+      return {
+        storeId,
+        storeName: getStoreDisplayName(store),
+        amount,
+      };
+    });
+    const warehouseExistence = storeAmounts.reduce(
+      (sum: number, entry: any) => sum + (entry?.amount ?? 0),
+      0
+    );
+    return {
+      ...product,
+      storeAmounts,
+      warehouseExistence,
+    };
+  });
+
+  return { stores, products: decoratedProducts };
+};
+
+const filterRunningOutProducts = (
+  products: any[],
+  options?: { requireWarehouseStock?: boolean }
+) => {
+  return products.filter((product: any) => {
+    const existence = Number(product.existence ?? 0);
+    const minExistence = Number(product.minExistence ?? 0);
+    const isRunningOut = existence - minExistence <= 0;
+    if (!isRunningOut) {
+      return false;
+    }
+    if (options?.requireWarehouseStock) {
+      const warehouseExistence =
+        typeof product.warehouseExistence === "number"
+          ? product.warehouseExistence
+          : (product.storeAmounts ?? []).reduce(
+              (sum: number, entry: any) => sum + (entry?.amount ?? 0),
+              0
+            );
+      return warehouseExistence > 0;
+    }
+    return true;
+  });
+};
+
+const buildProductsOutOfStockRows = (stores: any[], products: any[]) => {
+  return products.map((product: any, index: number) => {
+    const warehouseExistence =
+      typeof product.warehouseExistence === "number"
+        ? product.warehouseExistence
+        : (product.storeAmounts ?? []).reduce(
+            (sum: number, entry: any) => sum + (entry?.amount ?? 0),
+            0
+          );
+    const storeDetails = stores.map((store: any) => {
+      const storeId = toObjectIdString(store._id);
+      const storeName = getStoreDisplayName(store);
+      const match = product.storeAmounts?.find((entry: any) => {
+        if (storeId && entry.storeId) {
+          return String(entry.storeId) === storeId;
+        }
+        if (entry.storeName && storeName) {
+          return entry.storeName === storeName;
+        }
+        return false;
+      });
+      return {
+        storeId,
+        storeName,
+        amount: match ? match.amount ?? 0 : 0,
+      };
+    });
+    return {
+      index: index + 1,
+      productId: product._id,
+      name: product.name,
+      existence: product.existence,
+      minExistence: product.minExistence,
+      warehouseExistence,
+      stores: storeDetails,
+    };
+  });
+};
+
 const getDailySnapshot = async (
   CollectionSale: any,
   date: Date
@@ -289,13 +432,80 @@ const getSalesReport = async (req: any, res: any): Promise<void> => {
   }
 };
 
-const getProductsOutOfStockReport = async (req: any, res: any): Promise<void> => {
+const getProductsOutOfStockReport = async (
+  req: any,
+  res: any
+): Promise<void> => {
   try {
-    const products = await fetchProducts(req.CollectionProduct);
-    const pdf = generateProductsOutOfStockPdf(req.companyName, products);
+    const { stores, products } = await buildProductsWithStoreReportData(
+      req.CollectionProduct,
+      req.CollectionStore,
+      req.CollectionStoreItem
+    );
+    const pdf = generateProductsOutOfStockPdf(
+      req.companyName,
+      products,
+      stores
+    );
     res.send({ pdf });
   } catch (error) {
-    res.status(500).json({ message: "Error creating report" });
+    res.status(500).json({ message: "Error creando el reporte" });
+  }
+};
+
+const getProductsOutOfStockWithWarehouseReport = async (
+  req: any,
+  res: any
+): Promise<void> => {
+  try {
+    const { stores, products } = await buildProductsWithStoreReportData(
+      req.CollectionProduct,
+      req.CollectionStore,
+      req.CollectionStoreItem
+    );
+    const filteredProducts = filterRunningOutProducts(products, {
+      requireWarehouseStock: true,
+    });
+    const pdf = generateProductsOutOfStockPdf(
+      req.companyName,
+      filteredProducts,
+      stores
+    );
+    res.send({ pdf });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error creando el reporte con bodegas" });
+  }
+};
+
+const getProductsOutOfStockWithWarehouseData = async (
+  req: any,
+  res: any
+): Promise<void> => {
+  try {
+    const { stores, products } = await buildProductsWithStoreReportData(
+      req.CollectionProduct,
+      req.CollectionStore,
+      req.CollectionStoreItem
+    );
+    const filteredProducts = filterRunningOutProducts(products, {
+      requireWarehouseStock: true,
+    });
+    const rows = buildProductsOutOfStockRows(stores, filteredProducts);
+    const headers = [
+      "#",
+      "Nombre",
+      "Cantidad",
+      "Cantidad minima",
+      ...stores.map((store: any) => getStoreDisplayName(store)),
+    ];
+    console.log(JSON.stringify({ headers, rows }));
+    res.send({ headers, rows });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error obteniendo los datos del reporte" });
   }
 };
 
@@ -486,6 +696,8 @@ export default {
   getInventoryExcel,
   getSalesReport,
   getProductsOutOfStockReport,
+  getProductsOutOfStockWithWarehouseReport,
+  getProductsOutOfStockWithWarehouseData,
   getExpiringProducts,
   getTop10ABC,
   montlyReports,

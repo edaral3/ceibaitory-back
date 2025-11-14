@@ -26,6 +26,10 @@ const applyDocBranding = (doc: jsPDF) => {
   doc.setTextColor("#1B2430");
 };
 
+const getStoreDisplayName = (store: any): string => {
+  return store?.name ?? store?.ubication ?? "Bodega";
+};
+
 const tableDecorators = {
   headStyles: {
     fillColor: palette.primary,
@@ -202,26 +206,45 @@ export const generateSalesPdf = ({
 
 export const generateProductsOutOfStockPdf = (
   companyName: string,
-  products: ProductDocument[]
+  products: any[], // now expects products with storeAmounts
+  stores: any[]
 ): string => {
   const doc = new jsPDF();
   applyDocBranding(doc);
   doc.autoTable(buildHeader(companyName, "Reporte de productos por agotar"));
+  // Table header: static columns + one per store
+  const storeHeaders = stores.map((store: any) => getStoreDisplayName(store));
+  const head = [["#", "Nombre", "Cantidad", "Cantidad minima", ...storeHeaders]];
+  // Table body: static columns + one per store (amount)
   const body = products
     .filter((item) => item.existence - item.minExistence <= 0)
-    .map((item, index) => [
-      index + 1,
-      item.name,
-      item.existence,
-      item.minExistence,
-      currency(item.priceCost),
-      currency(item.salesPrice),
-    ]);
+    .map((item, index) => {
+      const staticCols = [
+        index + 1,
+        item.name,
+        item.existence,
+        item.minExistence,
+      ];
+      // storeAmounts: [{ storeId, storeName, amount }]
+      const storeAmounts = stores.map((store: any) => {
+        const storeId = store._id?.toString();
+        const storeName = getStoreDisplayName(store);
+        const found = item.storeAmounts?.find((sa: any) => {
+          if (storeId && sa.storeId) {
+            return String(sa.storeId) === storeId;
+          }
+          if (sa.storeName && storeName) {
+            return sa.storeName === storeName;
+          }
+          return false;
+        });
+        return found ? found.amount : 0;
+      });
+      return [...staticCols, ...storeAmounts];
+    });
   doc.autoTable({
     body,
-    head: [
-      ["#", "Nombre", "Cantidad", "Cantidad minima", "Precio costo", "Precio venta"],
-    ],
+    head,
     ...getTableTheme(),
   });
   return doc.output("datauristring");

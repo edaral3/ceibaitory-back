@@ -49,6 +49,8 @@ const setCollection = (collectionName: string) => {
       case 'report':
         req.CollectionProduct = getCollection('product', companyName)
         req.CollectionSale = getCollection('sale', companyName)
+        req.CollectionStoreItem = getCollection('storeItem', companyName)
+        req.CollectionStore = getCollection('store', companyName)
         break
       case 'farm':
         req.CollectionShed = getCollection('shed', companyName)

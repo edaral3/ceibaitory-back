@@ -14,6 +14,10 @@ router.get('/salesReport', validateToken(['owner']), setCollection('report'), re
 
 router.get('/productsOutOfStockReport', validateToken(['owner']), setCollection('report'), reports.getProductsOutOfStockReport)
 
+router.get('/productsOutOfStockWithWarehouseReport', validateToken(['owner']), setCollection('report'), reports.getProductsOutOfStockWithWarehouseReport)
+
+router.get('/productsOutOfStockWithWarehouseData', validateToken(['owner']), setCollection('report'), reports.getProductsOutOfStockWithWarehouseData)
+
 router.get('/expiringProducts', validateToken(['owner']), setCollection('report'), reports.getExpiringProducts)
 
 router.get('/top10ABC', validateToken(['owner']), setCollection('report'), reports.getTop10ABC)
