@@ -500,7 +500,6 @@ const getProductsOutOfStockWithWarehouseData = async (
       "Cantidad minima",
       ...stores.map((store: any) => getStoreDisplayName(store)),
     ];
-    console.log(JSON.stringify({ headers, rows }));
     res.send({ headers, rows });
   } catch (error) {
     res
