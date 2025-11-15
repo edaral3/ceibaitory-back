@@ -16,6 +16,10 @@ const getSchema = (): Schema => {
     owner: {
       type: String,
       required: true
+    },
+    deleted: {
+      type: Boolean,
+      default: false
     }
   })
 

@@ -604,7 +604,7 @@ const getBatchInfo = async (req: any, res: any): Promise<void> => {
 
 const getUsers = async (req: any, res: any): Promise<void> => {
   try {
-    const users = await req.CollectionUser.find({ company: req.company }, '-pwd')
+    const users = await req.CollectionUser.find({ company: req.company, deleted: { $ne: true } }, '-pwd')
     res.send(users)
   } catch (error: any) {
     sendError(res, error, 'Error getting users')

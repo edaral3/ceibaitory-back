@@ -38,7 +38,11 @@ const getSchema = (company: string): Schema => {
       type: Boolean,
       required: false,
       default: false
-  }
+    },
+    deleted: {
+      type: Boolean,
+      default: false
+    }
   })
 
   user.index({ user: 1 }, { unique: true })

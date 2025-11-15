@@ -13,6 +13,10 @@ const getSchema = (): Schema => {
         updatedAt: {
             type: Date,
             default: Date.now
+        },
+        deleted: {
+            type: Boolean,
+            default: false
         }
     })
     return concentrateType

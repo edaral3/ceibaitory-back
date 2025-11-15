@@ -26,6 +26,10 @@ const getSchema = (): Schema => {
     description: {
       type: String,
       required: false
+    },
+    deleted: {
+      type: Boolean,
+      default: false
     }
   })
   supplier.index({ name: 1 }, { unique: true })

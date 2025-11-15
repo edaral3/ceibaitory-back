@@ -55,6 +55,10 @@ const getSchema = (company: string): Schema => {
     canModifyPrice: {
       type: Boolean,
       required: false
+    },
+    deleted: {
+      type: Boolean,
+      default: false
     }
   })
   return product

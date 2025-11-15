@@ -32,6 +32,10 @@ const getSchema = (company: string): Schema => {
       required: false,
       default: 0
     },
+    deleted: {
+      type: Boolean,
+      default: false
+    }
   })
   return client
 }

@@ -11,6 +11,10 @@ const getSchema = (): Schema => {
       type: String,
       enum: BirdTypeEnum,
       required: true
+    },
+    deleted: {
+      type: Boolean,
+      default: false
     }
   })
 
