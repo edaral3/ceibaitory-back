@@ -32,9 +32,9 @@ router.put('/:id', validateToken(['owner', 'admin']), setCollection('storeItem')
 
 router.delete('/:id', validateToken(['owner', 'admin']), setCollection('storeItem'), storeItems.delete)
 
-router.get('/:id', validateToken(['owner', 'admin']), setCollection('storeItem'), storeItems.getOne)
+router.get('/:id', validateToken(['owner', 'admin', 'vendedor']), setCollection('storeItem'), storeItems.getOne)
 
-router.get('/', validateToken(['owner', 'admin']), setCollection('storeItem'), storeItems.getAll)
+router.get('/', validateToken(['owner', 'admin', 'vendedor']), setCollection('storeItem'), storeItems.getAll)
 
 router.get('/history/all', validateToken(['owner', 'admin', 'worker']), setCollection('storeItem'), storeItems.getStoreHistory)
 

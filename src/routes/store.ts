@@ -11,8 +11,8 @@ router.put('/:id', validateToken(['owner', 'admin']), setCollection('store'), st
 
 router.delete('/:id', validateToken(['owner', 'admin']), setCollection('store'), store.delete)
 
-router.get('/:id', validateToken(['owner', 'admin']), setCollection('store'), store.getOne)
+router.get('/:id', validateToken(['owner', 'admin', 'vendedor']), setCollection('store'), store.getOne)
 
-router.get('/', validateToken(['owner', 'admin']), setCollection('store'), store.getAll)
+router.get('/', validateToken(['owner', 'admin', 'vendedor']), setCollection('store'), store.getAll)
 
 export default router

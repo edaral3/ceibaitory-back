@@ -16,7 +16,7 @@ router.get('/productsOutOfStockReport', validateToken(['owner']), setCollection(
 
 router.get('/productsOutOfStockWithWarehouseReport', validateToken(['owner']), setCollection('report'), reports.getProductsOutOfStockWithWarehouseReport)
 
-router.get('/productsOutOfStockWithWarehouseData', validateToken(['owner']), setCollection('report'), reports.getProductsOutOfStockWithWarehouseData)
+router.get('/productsOutOfStockWithWarehouseData', validateToken(['owner', 'admin', 'vendedor']), setCollection('report'), reports.getProductsOutOfStockWithWarehouseData)
 
 router.get('/expiringProducts', validateToken(['owner']), setCollection('report'), reports.getExpiringProducts)
 
