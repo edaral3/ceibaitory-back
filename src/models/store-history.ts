@@ -1,5 +1,4 @@
 import { Schema } from 'mongoose'
-import branch from '../controller/branch'
 
 const getSchema = (company: string): Schema => {
   const storeHistory = new Schema({

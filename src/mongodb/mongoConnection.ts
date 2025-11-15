@@ -1,17 +1,20 @@
 import Mongoose from 'mongoose'
 import config from '../config/config'
 
-const mongoConnection = (): void => {
+export const mongoConnection = async (): Promise<void> => {
+  const uri = config.db.mongo.host
+  if (!uri) {
+    throw new Error('Mongo connection string is not configured (DB_MONGO_HOST).')
+  }
+
   Mongoose.Promise = global.Promise
   Mongoose.set('strictQuery', true)
-  Mongoose.connect(config.db.mongo.host||"")
-    .then(() => {
-      console.log('Database succeeded connection')
-    })
-    .catch((error: any) => {
-      console.log('Failed connection to databases', error)
-      process.exit()
-    })
-}
 
-export { mongoConnection }
+  try {
+    await Mongoose.connect(uri)
+    console.log('Database succeeded connection')
+  } catch (error) {
+    console.error('Failed connection to databases', error)
+    throw error
+  }
+}

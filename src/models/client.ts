@@ -33,6 +33,8 @@ const getSchema = (company: string): Schema => {
       default: 0
     },
   })
+  client.index({ branch: 1 })
+  client.index({ branch: 1, name: 1 })
   return client
 }
 

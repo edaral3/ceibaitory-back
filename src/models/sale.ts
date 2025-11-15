@@ -71,6 +71,8 @@ const getSchema = (company: string): Schema => {
     products: [trade]
   })
 
+  sale.index({ date: -1 })
+  sale.index({ branch: 1, date: -1 })
   return sale
 }
 

@@ -36,6 +36,8 @@ const getSchema = (company: string): Schema => {
     products: [trade]
   })
 
+  purchase.index({ date: -1 })
+  purchase.index({ supplier: 1, date: -1 })
   return purchase
 }
 

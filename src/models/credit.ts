@@ -95,6 +95,9 @@ const getSchema = (company: string): Schema => {
     payments: [payments],
     products: [trade]
   })
+
+  credit.index({ date: -1 })
+  credit.index({ client: 1, date: -1 })
   return credit
 }
 

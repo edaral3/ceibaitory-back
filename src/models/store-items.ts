@@ -18,6 +18,8 @@ const getSchema = (company: string): Schema => {
     }
   })
 
+  storeItem.index({ ubication: 1, productId: 1 }, { unique: true })
+  storeItem.index({ ubication: 1 })
   return storeItem
 }
 

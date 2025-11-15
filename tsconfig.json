@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "CommonJS",
-    "lib": ["es2019", "ES2021.String"],
+    "lib": ["es2020", "es2021.string"],
     "outDir": "./dist",
     "strict": true,
     "moduleResolution": "node",
@@ -11,8 +11,13 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "sourceMap": true,
+    "incremental": true,
+    "baseUrl": "./"
   },
-  "include": ["src", "src/routes/farm.ts", "index.ts"],
-  "exclude": ["node_modules", "src//*.spec.ts"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "dist", "**/*.spec.ts"]
 }

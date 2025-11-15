@@ -57,6 +57,10 @@ const getSchema = (company: string): Schema => {
       required: false
     }
   })
+
+  product.index({ name: 1 }, { unique: true })
+  product.index({ barcode: 1 }, { unique: true, sparse: true })
+  product.index({ branch: 1 })
   return product
 }
 
