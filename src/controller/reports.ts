@@ -400,7 +400,9 @@ const getTop10ABC = async (req: any, res: any): Promise<void> => {
 const getDayReports = async (req: any, res: any): Promise<void> => {
   try {
     const date = new Date(req.query.date);
+    date.setHours(date.getHours() + 6)
     const snapshot = await getDailySnapshot(req.CollectionSale, date);
+
     res.send({
       dailyBillingSales: roundCurrency(snapshot.billedTotal),
       dailySales: roundCurrency(snapshot.total),
@@ -415,8 +417,14 @@ const getDayReports = async (req: any, res: any): Promise<void> => {
 const getSalesReport = async (req: any, res: any): Promise<void> => {
   const { startDate, endDate, typeReport } = req.query;
   try {
-    const range = buildGuatemalaRange(startDate, endDate);
-    const sales = await fetchSales(req.CollectionSale, range, {
+    const start = new Date(startDate)
+    start.setHours(start.getHours() + 6)
+
+    const end = new Date(endDate)
+    end.setHours(end.getHours() + 6)
+    end.setDate(end.getDate() + 1)
+
+    const sales = await fetchSales(req.CollectionSale, {end, start}, {
       inclusiveEnd: true,
     });
     const pdf = generateSalesPdf({
