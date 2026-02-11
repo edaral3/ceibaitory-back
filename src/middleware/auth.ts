@@ -4,7 +4,15 @@ import { getCollection } from '../models'
 
 const validateToken = (roles: string[]) => {
   return (req: any, res: any, next: any) => {
-    const token = req.headers.authorization
+    const header = req.headers.authorization
+    const token = typeof header === 'string' && header.startsWith('Bearer ')
+      ? header.slice(7)
+      : header
+    if (!token) {
+      return res.status(401).json({
+        message: 'Invalid token'
+      })
+    }
     jwt.verify(token, config.secret, async (error, decoded) => {
       if (error) {
         return res.status(401).json({

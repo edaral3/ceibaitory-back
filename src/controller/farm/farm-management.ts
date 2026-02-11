@@ -1,4 +1,5 @@
 import Mongoose, { type ClientSession } from 'mongoose'
+import { decreaseCashBalance } from '../delivery/services/cash-balance.service'
 import BatchInfoTypeEnum from '../../enum/batch-info-type.enum'
 import ConcentrateStoreInfoEnum from '../../enum/concentrate-store-info.enum'
 import PDFDocument from 'pdfkit'
@@ -741,8 +742,25 @@ const updateEggBillState = async (req: any, res: any): Promise<void> => {
     const { billId } = req.params
     const eggSale = await req.CollectionEggSale.findById(billId)
     if (!eggSale) throw { type: 400, message: 'Bill not found' }
-    await req.CollectionEggSale.findByIdAndUpdate(billId, { $set: { paid: true } })
-    res.send({ message: 'OK' })
+    const paymentAmount = Number(req.body?.amount ?? eggSale.total)
+    if (Number.isNaN(paymentAmount) || paymentAmount <= 0) {
+      throw { type: 400, message: 'Invalid amount' }
+    }
+    const toMoney = (value: number): number => Math.round((value + Number.EPSILON) * 100) / 100
+    const currentPaid = toMoney(Number(eggSale.paidAmount ?? 0))
+    const total = toMoney(Number(eggSale.total ?? 0))
+    const nextPaid = toMoney(Math.min(currentPaid + paymentAmount, total))
+    const nextPaidAt = nextPaid >= total ? new Date() : eggSale.paidAt ?? null
+
+    const updated = await req.CollectionEggSale.findByIdAndUpdate(
+      billId,
+      { $set: { paid: nextPaid >= total, paidAmount: nextPaid, paidAt: nextPaidAt } },
+      { new: true }
+    )
+    if (req.CollectionDeliveryCashBalance && paymentAmount > 0) {
+      await decreaseCashBalance(req.CollectionDeliveryCashBalance, paymentAmount)
+    }
+    res.send(updated)
   } catch (error: any) {
     sendError(res, error, 'Error updating bill')
   }

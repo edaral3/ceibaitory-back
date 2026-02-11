@@ -21,6 +21,12 @@ import concentrateType from './concentrate-type'
 import store from './store'
 import storeItem from './store-items'
 import storeHistory from './store-history'
+import deliveryClient from './delivery-client'
+import deliverySale from './delivery-sale'
+import deliveryVisit from './delivery-visit'
+import deliveryVisitAssignment from './delivery-visit-assignment'
+import deliveryVisitCarryover from './delivery-visit-carryover'
+import deliveryCashBalance from './delivery-cash-balance'
 
 const models = {
   client,
@@ -43,7 +49,13 @@ const models = {
   concentrateType,
   store,
   storeItem,
-  storeHistory
+  storeHistory,
+  deliveryClient,
+  deliverySale,
+  deliveryVisit,
+  deliveryVisitAssignment,
+  deliveryVisitCarryover,
+  deliveryCashBalance
 }
 
 const getCollection = (collectionName: string, companyName: string): any => {

@@ -7,30 +7,32 @@ const setCollection = (collectionName: string) => {
       next()
       return
     }
-    let companyName = req.companyName;
-    if(companyName){
-      companyName = req.companyName.trim().toLowerCase().replaceAll(' ','-')
+    let companyName = req.companyName
+    if (companyName) {
+      companyName = req.companyName.trim().toLowerCase().replaceAll(' ', '-')
     }
     const normalizedCollectionName = (() => {
-      if (collectionName === "userOwner") return "user";
-      return collectionName;
-    })();
-    req.collectionName = normalizedCollectionName;
+      if (collectionName === 'userOwner') return 'user'
+      return collectionName
+    })()
+    req.collectionName = normalizedCollectionName
 
-    if (collectionName !== 'report' && collectionName !== 'farm'&& companyName)
+    if (collectionName !== 'report' && collectionName !== 'farm' && companyName) {
       req.CollectionCrud = getCollection(req.collectionName, companyName)
+    }
+
     switch (collectionName) {
       case 'userOwner':
-          req.CollectionCompany = getCollection('company', '')
-          req.CollectionCrud = getCollection('user', companyName)
+        req.CollectionCompany = getCollection('company', '')
+        req.CollectionCrud = getCollection('user', companyName)
         break
-        case 'user':
-          req.CollectionCompany = getCollection('company', '')
-          req.CollectionCrud = getCollection('user', companyName)
-          if(companyName){
-            req.CollectionBranch = getCollection('branch', companyName)
-          }
-          break
+      case 'user':
+        req.CollectionCompany = getCollection('company', '')
+        req.CollectionCrud = getCollection('user', companyName)
+        if (companyName) {
+          req.CollectionBranch = getCollection('branch', companyName)
+        }
+        break
       case 'purchase':
         req.CollectionProduct = getCollection('product', companyName)
         req.CollectionPurchase = getCollection(collectionName, companyName)
@@ -64,6 +66,12 @@ const setCollection = (collectionName: string) => {
         req.CollectionEggSale = getCollection('eggSale', companyName)
         req.CollectionEggPrice = getCollection('eggPrice', companyName)
         req.CollectionConcentrateType = getCollection('concentrateType', companyName)
+        req.CollectionDeliveryClient = getCollection('deliveryClient', companyName)
+        req.CollectionDeliverySale = getCollection('deliverySale', companyName)
+        req.CollectionDeliveryVisit = getCollection('deliveryVisit', companyName)
+        req.CollectionDeliveryVisitAssignment = getCollection('deliveryVisitAssignment', companyName)
+        req.CollectionDeliveryVisitCarryover = getCollection('deliveryVisitCarryover', companyName)
+        req.CollectionDeliveryCashBalance = getCollection('deliveryCashBalance', companyName)
         break
       case 'store':
       case 'storeItem':

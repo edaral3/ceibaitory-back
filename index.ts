@@ -19,25 +19,41 @@ import reports from './src/routes/reports'
 import root from './src/routes/root'
 import chat from './src/routes/chat'
 import farm from './src/routes/farm'
+import delivery from './src/routes/delivery'
 import { mongoConnection } from './src/mongodb/mongoConnection'
 
 const app = express()
 
+app.use((req, res, next) => {
+  const origin = typeof req.headers.origin === 'string' ? req.headers.origin : '*'
+  res.header('Access-Control-Allow-Origin', origin)
+  res.header('Vary', 'Origin')
+  res.header('Access-Control-Allow-Methods', 'GET,POST,DELETE,UPDATE,PUT,PATCH,OPTIONS')
+  res.header('Access-Control-Allow-Headers', 'authorization,content-type,user,pwd,branch')
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(204)
+    return
+  }
+  next()
+})
+
 const getCors = (): any => {
   const restrictedCors = {
     origin: [
-      'https://ceibaitory.com',
-      'https://ceibaitory.vercel.app',
-      'http://localhost:3000',
+      'https://ceibaitory.com/*',
+      'http://localhost:3000/*',
+      '*'
     ],
-    methods: ['GET', 'POST', 'DELETE', 'UPDATE', 'PUT'],
-    headers: ['authorization', 'Content-Type', 'user', 'pwd', '*'],
+    methods: ['GET', 'POST', 'DELETE', 'UPDATE', 'PUT', 'PATCH', 'OPTIONS', '*'],
+    allowedHeaders: ['authorization', 'content-type', 'user', 'pwd', 'branch'],
+    optionsSuccessStatus: 204
   }
 
   return restrictedCors
 }
 
 app.use(cors(getCors()))
+app.options('*', cors(getCors()))
 
 app.use(express.json())
 
@@ -60,6 +76,7 @@ app.use('/reports', reports)
 app.use('/chat', chat)
 app.use('/farm', farm)
 app.use('/store-items', storeItems)
+app.use('/api', delivery)
 
 
 const PORT = process.env.PORT ?? '3000'
