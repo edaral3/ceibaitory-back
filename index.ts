@@ -40,7 +40,7 @@ app.use((req, res, next) => {
 const getCors = (): any => {
   const restrictedCors = {
     origin: [
-      'https://ceibaitory.com/*',
+      'https://ceibaitory.com/*'
       //'http://localhost:3000/*'
     ],
     methods: ['GET', 'POST', 'DELETE', 'UPDATE', 'PUT', 'PATCH', 'OPTIONS', '*'],
@@ -76,7 +76,6 @@ app.use('/chat', chat)
 app.use('/farm', farm)
 app.use('/store-items', storeItems)
 app.use('/api', delivery)
-
 
 const PORT = process.env.PORT ?? '3000'
 app.set('port', PORT)
