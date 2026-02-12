@@ -121,25 +121,29 @@ export const listVisitClients = async (
 
   const dateObj = parseDateKey(date)
   const scheduled = clients.filter((client) => isClientScheduledForDate(client, dateObj))
-  const scheduledMap = new Map(scheduled.map((client) => [client._id, client]))
+  const scheduledMap = new Map(scheduled.map((client) => [String(client._id), client]))
 
   const overrides = await AssignmentModel.find({ date })
-  const addedIds = overrides.filter((item: any) => item.action === 'add').map((item: any) => item.clientId)
-  const removedIds = new Set(overrides.filter((item: any) => item.action === 'remove').map((item: any) => item.clientId))
+  const addedIds = overrides
+    .filter((item: any) => item.action === 'add')
+    .map((item: any) => String(item.clientId))
+  const removedIds = new Set(
+    overrides.filter((item: any) => item.action === 'remove').map((item: any) => String(item.clientId))
+  )
 
   const carryovers = await CarryoverModel.find({})
-  const carryIds = carryovers.map((item: any) => item.clientId)
+  const carryIds = carryovers.map((item: any) => String(item.clientId))
 
-  const clientsById = new Map(clients.map((client) => [client._id, client]))
+  const clientsById = new Map(clients.map((client) => [String(client._id), client]))
   const visibleIds = new Set<string>()
 
-  scheduledMap.forEach((_value, key) => visibleIds.add(key))
+  scheduledMap.forEach((_value, key) => visibleIds.add(String(key)))
   carryIds.forEach((id) => visibleIds.add(id))
   addedIds.forEach((id) => visibleIds.add(id))
-  removedIds.forEach((id) => visibleIds.delete(id))
+  removedIds.forEach((id) => visibleIds.delete(id as string))
 
   const visits = await VisitModel.find({ date })
-  const visitMap = new Map(visits.map((visit: any) => [visit.clientId, visit]))
+  const visitMap = new Map<string, any>(visits.map((visit: any) => [String(visit.clientId), visit]))
 
   const items = Array.from(visibleIds)
     .map((clientId) => {

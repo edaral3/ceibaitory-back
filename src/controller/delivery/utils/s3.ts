@@ -56,6 +56,6 @@ export const uploadToS3 = async (
   )
 
   const publicBaseRaw = process.env.S3_PUBLIC_URL ?? `https://${bucket}.s3.${region}.amazonaws.com`
-  const publicBase = publicBaseRaw.replace(/\\/+$/g, '')
+  const publicBase = publicBaseRaw.replace(/\/+$/g, '')
   return `${publicBase}/${key}`
 }
