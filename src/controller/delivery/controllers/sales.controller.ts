@@ -9,6 +9,7 @@ import {
   updateSale
 } from '../services/sales.service'
 import { increaseCashBalance } from '../services/cash-balance.service'
+import { listVisitClients, toggleVisit } from '../services/visits.service'
 import { AppError } from '../utils/errors'
 import { generateDeliveryReceipt } from '../utils/receipt'
 
@@ -37,11 +38,21 @@ const parseDate = (value: unknown, label: string): Date | undefined => {
   return date
 }
 
+const formatDateKey = (value: Date): string => {
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export const create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const clientModel = (req as any).CollectionDeliveryClient
     const saleModel = (req as any).CollectionDeliverySale
     const balanceModel = (req as any).CollectionDeliveryCashBalance
+    const visitModel = (req as any).CollectionDeliveryVisit
+    const assignmentModel = (req as any).CollectionDeliveryVisitAssignment
+    const carryoverModel = (req as any).CollectionDeliveryVisitCarryover
     const sale = await createSale(clientModel, saleModel, req.body)
     if (balanceModel && Array.isArray(sale?.payments) && sale.payments.length > 0) {
       const paidAmount = sale.payments.reduce(
@@ -51,6 +62,33 @@ export const create = async (req: Request, res: Response, next: NextFunction): P
       if (paidAmount > 0) {
         await increaseCashBalance(balanceModel, paidAmount)
       }
+    }
+    try {
+      if (sale?.clientId && visitModel && assignmentModel && carryoverModel) {
+        const soldAt = sale?.soldAt ? new Date(sale.soldAt) : new Date()
+        const dateKey = formatDateKey(soldAt)
+        const visitClients = await listVisitClients(
+          clientModel,
+          visitModel,
+          assignmentModel,
+          carryoverModel,
+          dateKey
+        )
+        const clientId = String(sale.clientId)
+        const matched = visitClients.find((item: any) => {
+          const itemId = item?.client?._id ?? item?.client?.id
+          return String(itemId) === clientId
+        })
+        if (matched && !matched.visited) {
+          await toggleVisit(clientModel, visitModel, carryoverModel, {
+            clientId,
+            date: dateKey,
+            visited: true
+          })
+        }
+      }
+    } catch {
+      // best-effort: do not block sale creation
     }
     res.status(201).json(ok(sale))
   } catch (error) {

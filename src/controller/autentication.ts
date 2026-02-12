@@ -34,7 +34,8 @@ const login = async (req: any, res: any): Promise<any> => {
         company: { name: user.company.name, _id: user.company._id },
         branches,
         roles: user.type,
-        type: user.company.type
+        type: user.company.type,
+        farmAccessDeny: Array.isArray(user.farmAccessDeny) ? user.farmAccessDeny : []
       }
 
       const jwToken = jwt.sign(JSON.stringify(newToken), config.secret)

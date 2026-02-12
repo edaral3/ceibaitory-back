@@ -39,6 +39,11 @@ const getSchema = (company: string): Schema => {
       required: false,
       default: false
     },
+    farmAccessDeny: {
+      type: [String],
+      enum: ['egg', 'chicken', 'delivery'],
+      default: []
+    },
     deleted: {
       type: Boolean,
       default: false
