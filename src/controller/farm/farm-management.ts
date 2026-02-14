@@ -5,6 +5,10 @@ import ConcentrateStoreInfoEnum from '../../enum/concentrate-store-info.enum'
 import PDFDocument from 'pdfkit'
 import 'pdfkit-table'
 
+const CM_TO_POINTS = 72 / 2.54
+const EXTRA_VERTICAL_SPACE = 2 * CM_TO_POINTS
+const MEASURE_PAGE_HEIGHT = 2000
+
 type TableColumn = {
   label: string
   width: number
@@ -63,7 +67,22 @@ const formatCurrency = (value: number | undefined | null) => `Q${(Number(value) 
 const pipePdfToResponse = (res: any, doc: PDFDocument, fileName: string) => {
   res.setHeader('Content-Type', 'application/pdf')
   res.setHeader('Content-Disposition', `inline; filename=${fileName}`)
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+  res.setHeader('Pragma', 'no-cache')
+  res.setHeader('Expires', '0')
   doc.pipe(res)
+}
+
+const createTicketDoc = (width: number, pageHeight: number, sideMargin: number) => {
+  return new PDFDocument({
+    size: [width, pageHeight],
+    margins: {
+      top: EXTRA_VERTICAL_SPACE,
+      bottom: EXTRA_VERTICAL_SPACE,
+      left: sideMargin,
+      right: sideMargin
+    }
+  })
 }
 
 const drawTableHeaders = (doc: PDFDocument, tableTop: number, rowHeight: number, columns: TableColumn[]) => {
@@ -525,16 +544,13 @@ const chickenSale = async (req: any, res: any): Promise<void> => {
   }
 }
 
-const generateChickenPdf = (res: any, chickenSale: any, saleDate: string) => {
-  const doc = new PDFDocument({ size: [250, 400], margin: 12 })
-  pipePdfToResponse(res, doc, `ticket-${chickenSale._id}.pdf`)
-
+const renderChickenPdfContent = (doc: PDFDocument, chickenSale: any, saleDate: string) => {
   // Header
   writeTicketHeader(doc, 'Granja Aldana', chickenSale._id, saleDate)
   doc.fontSize(17).text(`Cliente: ${chickenSale.client?.name ?? ''}`)
 
   doc.moveDown(1.5)
-  doc.moveTo(12, doc.y).lineTo(238, doc.y).stroke()
+  doc.moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.width - doc.page.margins.right, doc.y).stroke()
 
   // Items
   const totalChickenAmount = chickenSale.chickenAmount ?? 0
@@ -544,6 +560,17 @@ const generateChickenPdf = (res: any, chickenSale: any, saleDate: string) => {
   doc.fontSize(17).text(`Cantidad de libras`, { continued: true }).text(`${totalChickenPound}`, { align: 'right' })
 
   writeTicketFooter(doc, `Q${(chickenSale.total ?? 0).toFixed(2)}`)
+}
+
+const generateChickenPdf = (res: any, chickenSale: any, saleDate: string) => {
+  const measureDoc = createTicketDoc(250, MEASURE_PAGE_HEIGHT, 12)
+  renderChickenPdfContent(measureDoc, chickenSale, saleDate)
+  const computedHeight = Math.max(Math.ceil(measureDoc.y + EXTRA_VERTICAL_SPACE), 250)
+  measureDoc.end()
+
+  const doc = createTicketDoc(250, computedHeight, 12)
+  pipePdfToResponse(res, doc, `ticket-${chickenSale._id}.pdf`)
+  renderChickenPdfContent(doc, chickenSale, saleDate)
   doc.end()
 }
 
@@ -644,10 +671,7 @@ const buildEggRows = (eggSale: any) => {
   return rows
 }
 
-const generateEggPdf = (res: any, eggSale: any, saleDate: string) => {
-  const doc = new PDFDocument({ size: [250, 480], margin: 14 })
-  pipePdfToResponse(res, doc, `ticket-${eggSale._id}.pdf`)
-
+const renderEggPdfContent = (doc: PDFDocument, eggSale: any, saleDate: string) => {
   writeTicketHeader(doc, 'Granja Aldana', eggSale._id, saleDate)
   doc.font('Helvetica-Bold').fontSize(12)
     .fillColor('#1f2937')
@@ -669,7 +693,17 @@ const generateEggPdf = (res: any, eggSale: any, saleDate: string) => {
 
   const tableHeight = rowHeight * (rows.length + 1)
   doc.y = tableTop + tableHeight + 14
+}
 
+const generateEggPdf = (res: any, eggSale: any, saleDate: string) => {
+  const measureDoc = createTicketDoc(250, MEASURE_PAGE_HEIGHT, 14)
+  renderEggPdfContent(measureDoc, eggSale, saleDate)
+  const computedHeight = Math.max(Math.ceil(measureDoc.y + EXTRA_VERTICAL_SPACE), 250)
+  measureDoc.end()
+
+  const doc = createTicketDoc(250, computedHeight, 14)
+  pipePdfToResponse(res, doc, `ticket-${eggSale._id}.pdf`)
+  renderEggPdfContent(doc, eggSale, saleDate)
   doc.end()
 }
 

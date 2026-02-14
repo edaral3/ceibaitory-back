@@ -1,5 +1,13 @@
 import PDFDocument from 'pdfkit'
 
+const CM_TO_POINTS = 72 / 2.54
+const VERTICAL_PAGE_PADDING = 2 * CM_TO_POINTS
+const BASE_MARGIN = 14
+const PAGE_WIDTH = 250
+const MEASURE_PAGE_HEIGHT = 2000
+const BORDER_INSET = 6
+const BORDER_WIDTH = 2.5
+
 type TableColumn = {
   label: string
   width: number
@@ -39,7 +47,35 @@ const formatCurrency = (value: number | undefined | null) => `Q${(Number(value) 
 const pipePdfToResponse = (res: any, doc: PDFDocument, fileName: string) => {
   res.setHeader('Content-Type', 'application/pdf')
   res.setHeader('Content-Disposition', `inline; filename=${fileName}`)
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+  res.setHeader('Pragma', 'no-cache')
+  res.setHeader('Expires', '0')
   doc.pipe(res)
+}
+
+const createReceiptDoc = (pageHeight: number) => {
+  return new PDFDocument({
+    size: [PAGE_WIDTH, pageHeight],
+    margins: {
+      top: VERTICAL_PAGE_PADDING,
+      bottom: VERTICAL_PAGE_PADDING,
+      left: BASE_MARGIN,
+      right: BASE_MARGIN
+    }
+  })
+}
+
+const drawDeliveryBorder = (doc: PDFDocument) => {
+  doc.save()
+  doc.lineWidth(BORDER_WIDTH)
+  doc.strokeColor('#111827')
+  doc.rect(
+    BORDER_INSET,
+    BORDER_INSET,
+    doc.page.width - BORDER_INSET * 2,
+    doc.page.height - BORDER_INSET * 2
+  ).stroke()
+  doc.restore()
 }
 
 const drawTableHeaders = (doc: PDFDocument, tableTop: number, rowHeight: number, columns: TableColumn[]) => {
@@ -163,10 +199,7 @@ const buildSaleRows = (sale: any): TableRow[] => {
   return rows
 }
 
-export const generateDeliveryReceipt = (res: any, sale: any, saleDate: string) => {
-  const doc = new PDFDocument({ size: [250, 480], margin: 14 })
-  pipePdfToResponse(res, doc, `ticket-${sale._id}.pdf`)
-
+const renderDeliveryReceiptContent = (doc: PDFDocument, sale: any, saleDate: string) => {
   writeTicketHeader(doc, 'Granja Aldana', resolveClientName(sale), saleDate)
   doc.font('Helvetica-Bold').fontSize(12)
     .fillColor('#1f2937')
@@ -190,12 +223,26 @@ export const generateDeliveryReceipt = (res: any, sale: any, saleDate: string) =
   doc.y = tableTop + tableHeight + 14
 
   if (sale?.status === 'pending') {
+    const left = doc.page.margins.left
+    const width = doc.page.width - doc.page.margins.left - doc.page.margins.right
     doc.font('Helvetica-Bold')
-      .fontSize(11)
+      .fontSize(20)
       .fillColor('#b91c1c')
-      .text('Pendiente de pago.')
+      .text('Pendiente de pago.', left, doc.y, { width, align: 'left', lineBreak: false })
     doc.moveDown(0.4)
   }
+}
+
+export const generateDeliveryReceipt = (res: any, sale: any, saleDate: string) => {
+  const measureDoc = createReceiptDoc(MEASURE_PAGE_HEIGHT)
+  renderDeliveryReceiptContent(measureDoc, sale, saleDate)
+  const computedHeight = Math.max(Math.ceil(measureDoc.y + VERTICAL_PAGE_PADDING), PAGE_WIDTH)
+  measureDoc.end()
+
+  const doc = createReceiptDoc(computedHeight)
+  pipePdfToResponse(res, doc, `ticket-${sale._id}.pdf`)
+  drawDeliveryBorder(doc)
+  renderDeliveryReceiptContent(doc, sale, saleDate)
 
   doc.end()
 }
