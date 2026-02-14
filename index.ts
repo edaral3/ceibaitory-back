@@ -41,7 +41,6 @@ const getCors = (): any => {
   const restrictedCors = {
     origin: [
       'https://ceibaitory.com/*'
-      //'http://localhost:3000/*'
     ],
     methods: ['GET', 'POST', 'DELETE', 'UPDATE', 'PUT', 'PATCH', 'OPTIONS', '*'],
     allowedHeaders: ['authorization', 'content-type', 'user', 'pwd', 'branch'],
