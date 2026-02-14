@@ -116,10 +116,23 @@ const drawRows = (doc: PDFDocument, rows: TableRow[], tableTop: number, rowHeigh
   })
 }
 
-const writeTicketHeader = (doc: PDFDocument, title: string, id: string, dateText?: string) => {
+const resolveClientName = (sale: any): string => {
+  const rawClient = sale?.clientId
+  if (rawClient && typeof rawClient === 'object') {
+    const name = rawClient.name ?? rawClient.fullName
+    if (typeof name === 'string' && name.trim().length > 0) return name.trim()
+  }
+  if (sale?.client && typeof sale.client === 'object') {
+    const name = sale.client.name ?? sale.client.fullName
+    if (typeof name === 'string' && name.trim().length > 0) return name.trim()
+  }
+  return 'Cliente'
+}
+
+const writeTicketHeader = (doc: PDFDocument, title: string, clientName: string, dateText?: string) => {
   doc.font('Helvetica-Bold').fontSize(14).fillColor('#111827').text(title)
   doc.moveDown(0.2)
-  doc.font('Helvetica').fontSize(10).fillColor('#4b5563').text(`Ticket #${id}`)
+  doc.font('Helvetica').fontSize(10).fillColor('#4b5563').text(`Cliente: ${clientName}`)
   if (dateText) {
     doc.text(`Fecha: ${dateText}`)
   }
@@ -154,7 +167,7 @@ export const generateDeliveryReceipt = (res: any, sale: any, saleDate: string) =
   const doc = new PDFDocument({ size: [250, 480], margin: 14 })
   pipePdfToResponse(res, doc, `ticket-${sale._id}.pdf`)
 
-  writeTicketHeader(doc, 'Granja Aldana', sale._id, saleDate)
+  writeTicketHeader(doc, 'Granja Aldana', resolveClientName(sale), saleDate)
   doc.font('Helvetica-Bold').fontSize(12)
     .fillColor('#1f2937')
     .text('Detalle - Resumen de articulos')
@@ -175,6 +188,14 @@ export const generateDeliveryReceipt = (res: any, sale: any, saleDate: string) =
 
   const tableHeight = rowHeight * (rows.length + 1)
   doc.y = tableTop + tableHeight + 14
+
+  if (sale?.status === 'pending') {
+    doc.font('Helvetica-Bold')
+      .fontSize(11)
+      .fillColor('#b91c1c')
+      .text('Pendiente de pago.')
+    doc.moveDown(0.4)
+  }
 
   doc.end()
 }
