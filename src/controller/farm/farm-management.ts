@@ -8,6 +8,8 @@ import 'pdfkit-table'
 const CM_TO_POINTS = 72 / 2.54
 const EXTRA_VERTICAL_SPACE = 2 * CM_TO_POINTS
 const MEASURE_PAGE_HEIGHT = 2000
+const EGG_BORDER_INSET = 6
+const EGG_BORDER_WIDTH = 2.5
 
 type TableColumn = {
   label: string
@@ -83,6 +85,19 @@ const createTicketDoc = (width: number, pageHeight: number, sideMargin: number) 
       right: sideMargin
     }
   })
+}
+
+const drawEggBorder = (doc: PDFDocument) => {
+  doc.save()
+  doc.lineWidth(EGG_BORDER_WIDTH)
+  doc.strokeColor('#111827')
+  doc.rect(
+    EGG_BORDER_INSET,
+    EGG_BORDER_INSET,
+    doc.page.width - EGG_BORDER_INSET * 2,
+    doc.page.height - EGG_BORDER_INSET * 2
+  ).stroke()
+  doc.restore()
 }
 
 const drawTableHeaders = (doc: PDFDocument, tableTop: number, rowHeight: number, columns: TableColumn[]) => {
@@ -703,6 +718,7 @@ const generateEggPdf = (res: any, eggSale: any, saleDate: string) => {
 
   const doc = createTicketDoc(250, computedHeight, 14)
   pipePdfToResponse(res, doc, `ticket-${eggSale._id}.pdf`)
+  drawEggBorder(doc)
   renderEggPdfContent(doc, eggSale, saleDate)
   doc.end()
 }
