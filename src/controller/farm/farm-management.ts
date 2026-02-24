@@ -66,6 +66,9 @@ const formatTypeShort = (type?: string) => {
 
 const formatCurrency = (value: number | undefined | null) => `Q${(Number(value) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
+const toFileSlug = (str: string) =>
+  str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9\s-]/g, '').trim().replace(/\s+/g, '-').toLowerCase()
+
 const pipePdfToResponse = (res: any, doc: PDFDocument, fileName: string) => {
   res.setHeader('Content-Type', 'application/pdf')
   res.setHeader('Content-Disposition', `inline; filename=${fileName}`)
@@ -102,34 +105,53 @@ const drawEggBorder = (doc: PDFDocument) => {
 
 const drawTableHeaders = (doc: PDFDocument, tableTop: number, rowHeight: number, columns: TableColumn[]) => {
   const startX = doc.page.margins.left
+  const totalWidth = columns.reduce((acc, col) => acc + col.width, 0)
   let currentX = startX
 
+  // Top border
+  doc.lineWidth(1.5).strokeColor('#000000')
+    .moveTo(startX, tableTop).lineTo(startX + totalWidth, tableTop).stroke()
+
   columns.forEach((column) => {
-    doc.save()
-    doc.lineWidth(1)
-    doc.rect(currentX, tableTop, column.width, rowHeight).fillAndStroke('#f5f5f5', '#d1d5db')
     doc.font('Helvetica-Bold')
       .fontSize(10)
-      .fillColor('#1f2937')
+      .fillColor('#000000')
       .text(column.label, currentX + 3, tableTop + (rowHeight - 10) / 2, {
         width: column.width - 6,
-        align: column.align ?? 'left'
+        align: column.align ?? 'left',
+        lineBreak: false,
       })
-    doc.restore()
     currentX += column.width
   })
 
-  doc.fillColor('#1f2937').strokeColor('#1f2937')
+  // Bottom border under headers
+  doc.lineWidth(1.5).strokeColor('#000000')
+    .moveTo(startX, tableTop + rowHeight).lineTo(startX + totalWidth, tableTop + rowHeight).stroke()
+
+  doc.fillColor('#000000').strokeColor('#000000')
 }
 
 const drawRows = (doc: PDFDocument, rows: TableRow[], tableTop: number, rowHeight: number, columns: TableColumn[]) => {
   const startX = doc.page.margins.left
+  const totalWidth = columns.reduce((acc, col) => acc + col.width, 0)
 
   rows.forEach((row, rowIndex) => {
     const y = tableTop + (rowIndex + 1) * rowHeight
     const rowHasBold = row.some((cell) => typeof cell === 'object' && cell !== null && 'bold' in cell && Boolean((cell as TableCellObject).bold))
     let currentX = startX
     let colPointer = 0
+
+    if (rowHasBold) {
+      // Solid separator before total row
+      doc.lineWidth(1.5).strokeColor('#000000')
+        .moveTo(startX, y).lineTo(startX + totalWidth, y).stroke()
+    } else if (rowIndex > 0) {
+      // Thin dashed separator between data rows
+      doc.save()
+      doc.dash(2, { space: 2 }).lineWidth(0.4).strokeColor('#888888')
+        .moveTo(startX, y).lineTo(startX + totalWidth, y).stroke()
+      doc.restore()
+    }
 
     while (colPointer < columns.length) {
       const column = columns[colPointer]
@@ -157,34 +179,31 @@ const drawRows = (doc: PDFDocument, rows: TableRow[], tableTop: number, rowHeigh
       }
 
       const cellWidth = columns.slice(colPointer, colPointer + colSpan).reduce((acc, col) => acc + col.width, 0)
-
-      const highlightColor = rowHasBold ? '#eef2ff' : '#ffffff'
-      doc.save()
-      doc.lineWidth(1)
-      doc.rect(currentX, y, cellWidth, rowHeight).fillAndStroke(highlightColor, '#d1d5db')
-
-      const isBold = boldCell
-      const fontSize = isBold ? 11.5 : 10
+      const isBold = boldCell || rowHasBold
+      const fontSize = isBold ? 13 : 11
       const textValue = cellValue === null || cellValue === undefined ? '' : String(cellValue)
-      const textAlign = cellAlign
 
       doc.font(isBold ? 'Helvetica-Bold' : 'Helvetica')
         .fontSize(fontSize)
-        .fillColor(isBold ? '#1e3a8a' : '#1f2937')
+        .fillColor('#000000')
         .text(textValue, currentX + 3, y + (rowHeight - fontSize) / 2, {
           width: cellWidth - 6,
-          align: textAlign,
+          align: cellAlign,
           ellipsis: true,
-          lineBreak: false
+          lineBreak: false,
         })
 
-      doc.restore()
       currentX += cellWidth
       colPointer += colSpan
     }
   })
 
-  doc.fillColor('#1f2937').strokeColor('#1f2937')
+  // Bottom border after last row
+  const lastRowY = tableTop + (rows.length + 1) * rowHeight
+  doc.lineWidth(1.5).strokeColor('#000000')
+    .moveTo(startX, lastRowY).lineTo(startX + totalWidth, lastRowY).stroke()
+
+  doc.fillColor('#000000').strokeColor('#000000')
 }
 
 // Generic small ticket helpers (used for both chicken and eggs) ----------------
@@ -193,31 +212,36 @@ const writeTicketHeader = (doc: PDFDocument, title: string, _id: string, dateTex
   const right = doc.page.width - doc.page.margins.right
   const contentWidth = right - left
   const headerTop = doc.y
-  const headerHeight = 64
 
-  doc.save()
-  doc.roundedRect(left, headerTop, contentWidth, headerHeight, 10).fill('#1e3a8a')
-  doc.restore()
+  // Double top border: thick then thin
+  doc.lineWidth(2.5).strokeColor('#000000')
+    .moveTo(left, headerTop).lineTo(right, headerTop).stroke()
+  doc.lineWidth(0.6).strokeColor('#000000')
+    .moveTo(left, headerTop + 5).lineTo(right, headerTop + 5).stroke()
 
-  doc.fillColor('#f9fafb')
+  // Store name
+  doc.fillColor('#000000')
     .font('Helvetica-Bold')
-    .fontSize(18)
-    .text(title, left, headerTop + 8, { width: contentWidth, align: 'center' })
+    .fontSize(20)
+    .text(title, left, headerTop + 13, { width: contentWidth, align: 'center' })
 
   if (dateText) {
     doc.font('Helvetica')
       .fontSize(13)
-      .text(dateText, left, headerTop + 38, { width: contentWidth, align: 'center' })
+      .fillColor('#000000')
+      .text(dateText, left, doc.y + 2, { width: contentWidth, align: 'center' })
   }
 
-  doc.strokeColor('#d1d5db')
-    .lineWidth(1)
-    .moveTo(left, headerTop + headerHeight + 6)
-    .lineTo(right, headerTop + headerHeight + 6)
-    .stroke()
+  const headerBottom = doc.y + 8
 
-  doc.y = headerTop + headerHeight + 16
-  doc.fillColor('#1f2937').strokeColor('#1f2937')
+  // Double bottom border: thin then thick
+  doc.lineWidth(0.6).strokeColor('#000000')
+    .moveTo(left, headerBottom).lineTo(right, headerBottom).stroke()
+  doc.lineWidth(2.5).strokeColor('#000000')
+    .moveTo(left, headerBottom + 5).lineTo(right, headerBottom + 5).stroke()
+
+  doc.y = headerBottom + 15
+  doc.fillColor('#000000').strokeColor('#000000')
 }
 
 const writeTicketFooter = (doc: PDFDocument, totalText: string) => {
@@ -225,27 +249,35 @@ const writeTicketFooter = (doc: PDFDocument, totalText: string) => {
   const right = doc.page.width - doc.page.margins.right
   const contentWidth = right - left
 
-  doc.moveDown(1)
-  doc.strokeColor('#d1d5db')
-    .lineWidth(1)
-    .moveTo(left, doc.y)
-    .lineTo(right, doc.y)
-    .stroke()
+  doc.moveDown(0.8)
 
-  doc.moveDown(0.7)
-  doc.fillColor('#111827')
-    .font('Helvetica-Bold')
-    .fontSize(15)
-    .text('Total a pagar', left, doc.y, { width: contentWidth / 2 })
-  doc.text(totalText, left, doc.y, { width: contentWidth, align: 'right' })
+  // Double separator before total: thin then thick
+  const sep1Y = doc.y
+  doc.lineWidth(0.6).strokeColor('#000000')
+    .moveTo(left, sep1Y).lineTo(right, sep1Y).stroke()
+  doc.lineWidth(2.5).strokeColor('#000000')
+    .moveTo(left, sep1Y + 5).lineTo(right, sep1Y + 5).stroke()
 
-  doc.moveDown(1)
-  doc.fillColor('#4b5563')
-    .font('Helvetica')
-    .fontSize(12)
-    .text('Gracias por la compra!', left, doc.y, { width: contentWidth, align: 'center' })
+  // "TOTAL A PAGAR" label and large amount — both centered
+  const totalLabelY = sep1Y + 15
+  doc.font('Helvetica').fontSize(12).fillColor('#000000')
+    .text('TOTAL A PAGAR', left, totalLabelY, { width: contentWidth, align: 'center' })
+  doc.font('Helvetica-Bold').fontSize(23).fillColor('#000000')
+    .text(totalText, left, totalLabelY + 16, { width: contentWidth, align: 'center' })
 
-  doc.fillColor('#1f2937').strokeColor('#1f2937')
+  const afterTotalY = totalLabelY + 46
+
+  // Double separator after total: thick then thin
+  doc.lineWidth(2.5).strokeColor('#000000')
+    .moveTo(left, afterTotalY).lineTo(right, afterTotalY).stroke()
+  doc.lineWidth(0.6).strokeColor('#000000')
+    .moveTo(left, afterTotalY + 5).lineTo(right, afterTotalY + 5).stroke()
+
+  doc.font('Helvetica').fontSize(13).fillColor('#000000')
+    .text('¡Gracias por su compra!', left, afterTotalY + 12, { width: contentWidth, align: 'center' })
+
+  doc.y = afterTotalY + 32
+  doc.fillColor('#000000').strokeColor('#000000')
 }
 
 // ---------- Actions ------------------------------------------------------
@@ -527,6 +559,7 @@ const chickenSale = async (req: any, res: any): Promise<void> => {
     })
 
     await chickenSale.save({ session })
+    chickenSale.client = client // attach populated client for PDF generation
 
     for (const batchSale of chickenBatch) {
       const batch = await req.CollectionBatch.findOne({ shed: batchSale.shed, state: true })
@@ -557,34 +590,45 @@ const chickenSale = async (req: any, res: any): Promise<void> => {
 }
 
 const renderChickenPdfContent = (doc: PDFDocument, chickenSale: any, saleDate: string) => {
-  // Header
   writeTicketHeader(doc, 'Granja Aldana', chickenSale._id, saleDate)
 
+  const left = doc.page.margins.left
+  const right = doc.page.width - doc.page.margins.right
+  const contentWidth = right - left
+
   if (!chickenSale.paid) {
-    const left = doc.page.margins.left
-    const right = doc.page.width - doc.page.margins.right
-    const contentWidth = right - left
     const badgeTop = doc.y
-    doc.save()
-    doc.roundedRect(left, badgeTop, contentWidth, 22, 4).fill('#fef2f2')
-    doc.fillColor('#dc2626').font('Helvetica-Bold').fontSize(11)
-      .text('PENDIENTE DE PAGO', left, badgeTop + 5, { width: contentWidth, align: 'center' })
-    doc.restore()
-    doc.y = badgeTop + 28
-    doc.fillColor('#1f2937')
+    doc.lineWidth(2).strokeColor('#000000')
+      .roundedRect(left, badgeTop, contentWidth, 28, 4).stroke()
+    doc.fillColor('#000000').font('Helvetica-Bold').fontSize(13)
+      .text('PENDIENTE DE PAGO', left, badgeTop + 7, { width: contentWidth, align: 'center' })
+    doc.y = badgeTop + 36
   }
 
-  doc.fontSize(17).text(`Cliente: ${chickenSale.client?.name ?? ''}`)
+  // Client — small label above, bold name below
+  doc.font('Helvetica').fontSize(11).fillColor('#000000')
+    .text('CLIENTE', left, doc.y)
+  doc.font('Helvetica-Bold').fontSize(17).fillColor('#000000')
+    .text(chickenSale.client?.name ?? '', left, doc.y + 1)
+  doc.y = doc.y + 24
 
-  doc.moveDown(1.5)
-  doc.moveTo(doc.page.margins.left, doc.y).lineTo(doc.page.width - doc.page.margins.right, doc.y).stroke()
+  // Thin separator
+  doc.lineWidth(0.8).strokeColor('#000000')
+    .moveTo(left, doc.y).lineTo(right, doc.y).stroke()
+  doc.y = doc.y + 9
 
-  // Items
-  const totalChickenAmount = chickenSale.chickenAmount ?? 0
-  const totalChickenPound = chickenSale.weight ?? 0
-  doc.moveDown(0.5)
-  doc.fontSize(17).text(`Cantidad de pollos`, { continued: true }).text(`${totalChickenAmount}`, { align: 'right' })
-  doc.fontSize(17).text(`Cantidad de libras`, { continued: true }).text(`${totalChickenPound}`, { align: 'right' })
+  // Items — two-column rows
+  const renderRow = (label: string, value: string) => {
+    const rowY = doc.y
+    doc.font('Helvetica').fontSize(13).fillColor('#000000')
+      .text(label, left, rowY, { width: contentWidth * 0.65 })
+    doc.font('Helvetica-Bold').fontSize(13).fillColor('#000000')
+      .text(value, left, rowY, { width: contentWidth, align: 'right' })
+    doc.y = rowY + 21
+  }
+
+  renderRow('Cantidad de pollos', `${chickenSale.chickenAmount ?? 0}`)
+  renderRow('Cantidad de libras', `${chickenSale.weight ?? 0}`)
 
   writeTicketFooter(doc, `Q${(Number(chickenSale.total) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)
 }
@@ -596,7 +640,8 @@ const generateChickenPdf = (res: any, chickenSale: any, saleDate: string) => {
   measureDoc.end()
 
   const doc = createTicketDoc(250, computedHeight, 12)
-  pipePdfToResponse(res, doc, `ticket-${chickenSale._id}.pdf`)
+  const clientSlug = toFileSlug(chickenSale.client?.name ?? 'cliente')
+  pipePdfToResponse(res, doc, `${clientSlug}-${saleDate}.pdf`)
   renderChickenPdfContent(doc, chickenSale, saleDate)
   doc.end()
 }
@@ -700,19 +745,39 @@ const buildEggRows = (eggSale: any) => {
 
 const renderEggPdfContent = (doc: PDFDocument, eggSale: any, saleDate: string) => {
   writeTicketHeader(doc, 'Granja Aldana', eggSale._id, saleDate)
-  doc.font('Helvetica-Bold').fontSize(12)
-    .fillColor('#1f2937')
-    .text('Detalle · Resumen de artículos')
-  doc.moveDown(0.6)
+
+  if (!eggSale.paid) {
+    const left = doc.page.margins.left
+    const right = doc.page.width - doc.page.margins.right
+    const contentWidth = right - left
+    const badgeTop = doc.y
+    doc.lineWidth(2).strokeColor('#000000')
+      .roundedRect(left, badgeTop, contentWidth, 28, 4).stroke()
+    doc.fillColor('#000000').font('Helvetica-Bold').fontSize(13)
+      .text('PENDIENTE DE PAGO', left, badgeTop + 7, { width: contentWidth, align: 'center' })
+    doc.y = badgeTop + 36
+  }
+
+  // Section label with decorative side lines
+  const sectionY = doc.y
+  const sectionLeft = doc.page.margins.left
+  const sectionRight = doc.page.width - doc.page.margins.right
+  doc.lineWidth(0.7).strokeColor('#000000')
+    .moveTo(sectionLeft, sectionY + 6).lineTo(sectionLeft + 16, sectionY + 6).stroke()
+  doc.lineWidth(0.7).strokeColor('#000000')
+    .moveTo(sectionRight - 16, sectionY + 6).lineTo(sectionRight, sectionY + 6).stroke()
+  doc.font('Helvetica-Bold').fontSize(11).fillColor('#000000')
+    .text('ARTÍCULOS', sectionLeft, sectionY, { width: sectionRight - sectionLeft, align: 'center' })
+  doc.y = sectionY + 16
 
   const columns: TableColumn[] = [
-    { label: 'Tam', width: 38, align: 'center' },
+    { label: 'Tam', width: 34, align: 'center' },
     { label: 'Tipo', width: 36, align: 'center' },
-    { label: 'Cant.', width: 32, align: 'right' },
+    { label: 'Cant.', width: 36, align: 'right' },
     { label: 'Precio', width: 56, align: 'right' },
     { label: 'Importe', width: 58, align: 'right' }
   ]
-  const rowHeight = 22
+  const rowHeight = 26
   const tableTop = doc.y
   const rows = buildEggRows(eggSale)
   drawTableHeaders(doc, tableTop, rowHeight, columns)
@@ -729,7 +794,7 @@ const generateEggPdf = (res: any, eggSale: any, saleDate: string) => {
   measureDoc.end()
 
   const doc = createTicketDoc(250, computedHeight, 14)
-  pipePdfToResponse(res, doc, `ticket-${eggSale._id}.pdf`)
+  pipePdfToResponse(res, doc, `huevo-${saleDate}.pdf`)
   drawEggBorder(doc)
   renderEggPdfContent(doc, eggSale, saleDate)
   doc.end()
