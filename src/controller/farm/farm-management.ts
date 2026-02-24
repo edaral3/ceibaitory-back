@@ -64,7 +64,7 @@ const formatTypeShort = (type?: string) => {
   return type
 }
 
-const formatCurrency = (value: number | undefined | null) => `Q${(Number(value) || 0).toFixed(2)}`
+const formatCurrency = (value: number | undefined | null) => `Q${(Number(value) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 const pipePdfToResponse = (res: any, doc: PDFDocument, fileName: string) => {
   res.setHeader('Content-Type', 'application/pdf')
@@ -188,13 +188,12 @@ const drawRows = (doc: PDFDocument, rows: TableRow[], tableTop: number, rowHeigh
 }
 
 // Generic small ticket helpers (used for both chicken and eggs) ----------------
-const writeTicketHeader = (doc: PDFDocument, title: string, id: string, dateText?: string) => {
+const writeTicketHeader = (doc: PDFDocument, title: string, _id: string, dateText?: string) => {
   const left = doc.page.margins.left
   const right = doc.page.width - doc.page.margins.right
   const contentWidth = right - left
   const headerTop = doc.y
-  const headerHeight = 56
-  const readableId = id ? `Ticket #${String(id).slice(-8)}` : ''
+  const headerHeight = 64
 
   doc.save()
   doc.roundedRect(left, headerTop, contentWidth, headerHeight, 10).fill('#1e3a8a')
@@ -203,14 +202,12 @@ const writeTicketHeader = (doc: PDFDocument, title: string, id: string, dateText
   doc.fillColor('#f9fafb')
     .font('Helvetica-Bold')
     .fontSize(18)
-    .text(title, left, headerTop + 12, { width: contentWidth, align: 'center' })
-
-  doc.font('Helvetica')
-    .fontSize(9)
-    .text(readableId, left + 14, headerTop + 36, { width: contentWidth - 28 })
+    .text(title, left, headerTop + 8, { width: contentWidth, align: 'center' })
 
   if (dateText) {
-    doc.text(`Fecha: ${dateText}`, left + 14, headerTop + 36, { width: contentWidth - 28, align: 'right' })
+    doc.font('Helvetica')
+      .fontSize(13)
+      .text(dateText, left, headerTop + 38, { width: contentWidth, align: 'center' })
   }
 
   doc.strokeColor('#d1d5db')
@@ -562,6 +559,21 @@ const chickenSale = async (req: any, res: any): Promise<void> => {
 const renderChickenPdfContent = (doc: PDFDocument, chickenSale: any, saleDate: string) => {
   // Header
   writeTicketHeader(doc, 'Granja Aldana', chickenSale._id, saleDate)
+
+  if (!chickenSale.paid) {
+    const left = doc.page.margins.left
+    const right = doc.page.width - doc.page.margins.right
+    const contentWidth = right - left
+    const badgeTop = doc.y
+    doc.save()
+    doc.roundedRect(left, badgeTop, contentWidth, 22, 4).fill('#fef2f2')
+    doc.fillColor('#dc2626').font('Helvetica-Bold').fontSize(11)
+      .text('PENDIENTE DE PAGO', left, badgeTop + 5, { width: contentWidth, align: 'center' })
+    doc.restore()
+    doc.y = badgeTop + 28
+    doc.fillColor('#1f2937')
+  }
+
   doc.fontSize(17).text(`Cliente: ${chickenSale.client?.name ?? ''}`)
 
   doc.moveDown(1.5)
@@ -574,7 +586,7 @@ const renderChickenPdfContent = (doc: PDFDocument, chickenSale: any, saleDate: s
   doc.fontSize(17).text(`Cantidad de pollos`, { continued: true }).text(`${totalChickenAmount}`, { align: 'right' })
   doc.fontSize(17).text(`Cantidad de libras`, { continued: true }).text(`${totalChickenPound}`, { align: 'right' })
 
-  writeTicketFooter(doc, `Q${(chickenSale.total ?? 0).toFixed(2)}`)
+  writeTicketFooter(doc, `Q${(Number(chickenSale.total) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`)
 }
 
 const generateChickenPdf = (res: any, chickenSale: any, saleDate: string) => {
