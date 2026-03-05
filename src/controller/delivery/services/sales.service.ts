@@ -41,7 +41,8 @@ export const createSale = async (ClientModel: any, SaleModel: any, data: any) =>
       }
     })
 
-    const total = items.reduce((sum: number, item: any) => sum + item.lineTotal, 0)
+    const rawTotal = items.reduce((sum: number, item: any) => sum + item.lineTotal, 0)
+    const total = Math.round((rawTotal + Number.EPSILON) * 100) / 100
     return { items, total }
   }
 
@@ -141,7 +142,8 @@ export const updateSale = async (SaleModel: any, id: string, data: any) => {
       }
     })
     existing.items = items
-    existing.total = items.reduce((sum: number, item: any) => sum + item.lineTotal, 0)
+    const rawTotal = items.reduce((sum: number, item: any) => sum + item.lineTotal, 0)
+    existing.total = Math.round((rawTotal + Number.EPSILON) * 100) / 100
     existing.eggType = items[0]?.eggType ?? existing.eggType
     existing.eggSize = items[0]?.eggSize ?? existing.eggSize
     existing.unitPrice = items[0]?.unitPrice ?? existing.unitPrice
@@ -171,8 +173,9 @@ export const updateSale = async (SaleModel: any, id: string, data: any) => {
   }
 
   const payments = existing.payments ?? []
-  const summary = getPaymentSummary(existing.total, payments)
-  if (summary.paidAmount > existing.total) {
+  const roundedTotal = Math.round((Number(existing.total) + Number.EPSILON) * 100) / 100
+  const summary = getPaymentSummary(roundedTotal, payments)
+  if (summary.paidAmount > roundedTotal) {
     throw new AppError('BAD_REQUEST', 'Payments exceed total', 400)
   }
   existing.status = summary.status
@@ -195,9 +198,6 @@ export const cancelSale = async (SaleModel: any, id: string) => {
   const existing = await SaleModel.findOne({ _id: id })
   if (!existing) {
     throw new AppError('NOT_FOUND', 'Sale not found', 404)
-  }
-  if (existing.status === 'paid') {
-    throw new AppError('BAD_REQUEST', 'Cannot cancel a paid sale', 400)
   }
   if (existing.status === 'cancelled') {
     throw new AppError('BAD_REQUEST', 'Sale is already cancelled', 400)

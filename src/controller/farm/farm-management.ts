@@ -915,7 +915,13 @@ const eggSalesBetween = async (req: any, res: any): Promise<void> => {
   try {
     const { startDate, endDate } = req.query
     if (!startDate || !endDate) throw { type: 400, message: 'Start date and end date are required' }
-    const sales = await req.CollectionEggSale.find({ date: { $gte: new Date(startDate), $lte: new Date(endDate) } })
+    const start = new Date(`${startDate}T00:00:00.000Z`)
+    const end = new Date(`${endDate}T00:00:00.000Z`)
+    end.setUTCDate(end.getUTCDate() + 1)
+    const sales = await req.CollectionEggSale.find({
+      date: { $gte: start, $lt: end },
+      cancelled: { $ne: true }
+    })
     res.send(sales)
   } catch (error: any) {
     sendError(res, error, 'Error getting sales between dates')
@@ -957,7 +963,6 @@ const cancelChickenSale = async (req: any, res: any): Promise<void> => {
     const { id } = req.params
     const sale = await req.CollectionChickenSale.findById(id)
     if (!sale) throw { type: 404, message: 'Sale not found' }
-    if (sale.paid === true) throw { type: 400, message: 'Cannot cancel a paid sale' }
     if (sale.cancelled === true) throw { type: 400, message: 'Sale is already cancelled' }
     await req.CollectionChickenSale.findByIdAndUpdate(id, { $set: { cancelled: true } })
     res.send({ message: 'OK' })
@@ -971,7 +976,6 @@ const cancelEggSale = async (req: any, res: any): Promise<void> => {
     const { id } = req.params
     const sale = await req.CollectionEggSale.findById(id)
     if (!sale) throw { type: 404, message: 'Sale not found' }
-    if (sale.paid === true) throw { type: 400, message: 'Cannot cancel a paid sale' }
     if (sale.cancelled === true) throw { type: 400, message: 'Sale is already cancelled' }
     await req.CollectionEggSale.findByIdAndUpdate(id, { $set: { cancelled: true } })
     res.send({ message: 'OK' })
