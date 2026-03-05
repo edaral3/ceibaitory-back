@@ -23,11 +23,19 @@ export const create = async (req: Request, res: Response, next: NextFunction): P
 
 export const list = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { page, pageSize, skip, take } = getPagination(req.query.page, req.query.pageSize)
     const includeDeleted = req.query.includeDeleted === 'true'
     const q = typeof req.query.q === 'string' ? req.query.q : undefined
+    const all = req.query.all === 'true'
 
     const clientModel = (req as any).CollectionDeliveryClient
+
+    if (all) {
+      const { total, items } = await listClients(clientModel, { q, includeDeleted })
+      res.json(ok(items, { total }))
+      return
+    }
+
+    const { page, pageSize, skip, take } = getPagination(req.query.page, req.query.pageSize)
     const { total, items } = await listClients(clientModel, {
       q,
       includeDeleted,

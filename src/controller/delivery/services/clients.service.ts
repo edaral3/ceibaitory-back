@@ -3,8 +3,8 @@ import { AppError } from '../utils/errors'
 export interface ClientFilters {
   q?: string
   includeDeleted?: boolean
-  skip: number
-  take: number
+  skip?: number
+  take?: number
 }
 
 export const createClient = async (ClientModel: any, data: any) => {
@@ -31,12 +31,13 @@ export const listClients = async (
     ]
   }
 
+  const query = ClientModel.find(where).sort({ createdAt: -1 })
+  if (skip !== undefined) query.skip(skip)
+  if (take !== undefined) query.limit(take)
+
   const [total, items] = await Promise.all([
     ClientModel.countDocuments(where),
-    ClientModel.find(where)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(take)
+    query,
   ])
 
   return { total, items }
