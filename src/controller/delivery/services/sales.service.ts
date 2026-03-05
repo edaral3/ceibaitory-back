@@ -121,6 +121,13 @@ export const updateSale = async (SaleModel: any, id: string, data: any) => {
     throw new AppError('NOT_FOUND', 'Sale not found', 404)
   }
 
+  if (existing.status === 'paid') {
+    throw new AppError('BAD_REQUEST', 'Cannot modify a paid sale', 400)
+  }
+  if (existing.status === 'cancelled') {
+    throw new AppError('BAD_REQUEST', 'Cannot modify a cancelled sale', 400)
+  }
+
   if (Array.isArray(data.items) && data.items.length > 0) {
     const items = data.items.map((item: any) => {
       const quantity = Number(item.quantity) || 0
@@ -182,4 +189,20 @@ export const deleteSale = async (SaleModel: any, id: string) => {
   }
   await SaleModel.deleteOne({ _id: id })
   return { id }
+}
+
+export const cancelSale = async (SaleModel: any, id: string) => {
+  const existing = await SaleModel.findOne({ _id: id })
+  if (!existing) {
+    throw new AppError('NOT_FOUND', 'Sale not found', 404)
+  }
+  if (existing.status === 'paid') {
+    throw new AppError('BAD_REQUEST', 'Cannot cancel a paid sale', 400)
+  }
+  if (existing.status === 'cancelled') {
+    throw new AppError('BAD_REQUEST', 'Sale is already cancelled', 400)
+  }
+  existing.status = 'cancelled'
+  await existing.save()
+  return existing
 }

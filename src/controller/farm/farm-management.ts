@@ -684,6 +684,7 @@ const updateChickenBillState = async (req: any, res: any): Promise<void> => {
     const { billId } = req.params
     const chickenSale = await req.CollectionChickenSale.findById(billId)
     if (!chickenSale) throw { type: 400, message: 'Bill not found' }
+    if (chickenSale.paid === true) throw { type: 400, message: 'Sale is already paid' }
 
     await req.CollectionChickenSale.findByIdAndUpdate(billId, { $set: { paid: true } })
     res.send({ message: 'OK' })
@@ -869,6 +870,7 @@ const updateEggBillState = async (req: any, res: any): Promise<void> => {
     const { billId } = req.params
     const eggSale = await req.CollectionEggSale.findById(billId)
     if (!eggSale) throw { type: 400, message: 'Bill not found' }
+    if (eggSale.paid === true) throw { type: 400, message: 'Sale is already paid' }
     const paymentAmount = Number(req.body?.amount ?? eggSale.total)
     if (Number.isNaN(paymentAmount) || paymentAmount <= 0) {
       throw { type: 400, message: 'Invalid amount' }
@@ -947,6 +949,34 @@ const deleteEggSale = async (req: any, res: any): Promise<void> => {
     res.send({ message: 'OK' })
   } catch (error: any) {
     sendError(res, error, 'Error updating client price')
+  }
+}
+
+const cancelChickenSale = async (req: any, res: any): Promise<void> => {
+  try {
+    const { id } = req.params
+    const sale = await req.CollectionChickenSale.findById(id)
+    if (!sale) throw { type: 404, message: 'Sale not found' }
+    if (sale.paid === true) throw { type: 400, message: 'Cannot cancel a paid sale' }
+    if (sale.cancelled === true) throw { type: 400, message: 'Sale is already cancelled' }
+    await req.CollectionChickenSale.findByIdAndUpdate(id, { $set: { cancelled: true } })
+    res.send({ message: 'OK' })
+  } catch (error: any) {
+    sendError(res, error, 'Error cancelling chicken sale')
+  }
+}
+
+const cancelEggSale = async (req: any, res: any): Promise<void> => {
+  try {
+    const { id } = req.params
+    const sale = await req.CollectionEggSale.findById(id)
+    if (!sale) throw { type: 404, message: 'Sale not found' }
+    if (sale.paid === true) throw { type: 400, message: 'Cannot cancel a paid sale' }
+    if (sale.cancelled === true) throw { type: 400, message: 'Sale is already cancelled' }
+    await req.CollectionEggSale.findByIdAndUpdate(id, { $set: { cancelled: true } })
+    res.send({ message: 'OK' })
+  } catch (error: any) {
+    sendError(res, error, 'Error cancelling egg sale')
   }
 }
 
@@ -1118,6 +1148,8 @@ export default {
   updateClientPrice,
   deleteChickenSale,
   deleteEggSale,
+  cancelChickenSale,
+  cancelEggSale,
   deleteAction,
   createChikenShed,
   deleteChikenShed,

@@ -102,7 +102,7 @@ const getSchema = (company: string): Schema => {
       ],
       status: {
         type: String,
-        enum: ['pending', 'paid'],
+        enum: ['pending', 'paid', 'cancelled'],
         default: 'pending'
       },
       paidAt: {

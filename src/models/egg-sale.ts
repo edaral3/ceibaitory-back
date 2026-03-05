@@ -34,6 +34,10 @@ const getSchema = (): Schema => {
       type: Boolean,
       default: false
     },
+    cancelled: {
+      type: Boolean,
+      default: false
+    },
     paidAt: {
       type: Date,
       default: null

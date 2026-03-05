@@ -31,6 +31,10 @@ const getSchema = (company: string): Schema => {
       type: Boolean,
       default: false
     },
+    cancelled: {
+      type: Boolean,
+      default: false
+    },
     createdAt: {
       type: Date,
       default: Date.now,

@@ -129,6 +129,12 @@ router.delete(
   setCollection('farm'),
   salesController.remove
 )
+router.patch(
+  '/sales/:id/cancel',
+  validateToken(authRoles),
+  setCollection('farm'),
+  salesController.cancel
+)
 
 router.get(
   '/delivery/visits',

@@ -32,6 +32,7 @@ router.get('/clients', validateToken(['owner', 'admin', 'worker']), setCollectio
 router.post('/sale-chicken', validateToken(['owner', 'admin', 'worker']), setCollection('farm'), farmManagement.chickenSale)
 
 router.put('/sale-chicken/:billId', validateToken(['owner', 'admin', 'worker']), setCollection('farm'), farmManagement.updateChickenBillState)
+router.patch('/sale-chicken/:id/cancel', validateToken(['owner', 'admin', 'worker']), setCollection('farm'), farmManagement.cancelChickenSale)
 
 router.get('/sales-chicken', validateToken(['owner', 'admin', 'worker']), setCollection('farm'), farmManagement.chickenSales)
 
@@ -46,6 +47,7 @@ router.get('/sales-egg', validateToken(['owner', 'admin', 'worker']), setCollect
 router.put('/update-egg-price', validateToken(['owner', 'admin', 'worker']), setCollection('farm'), farmManagement.updateEggPrice)
 
 router.put('/sale-egg/:billId', validateToken(['owner', 'admin', 'worker']), setCollection('farm'), farmManagement.updateEggBillState)
+router.patch('/sale-egg/:id/cancel', validateToken(['owner', 'admin', 'worker']), setCollection('farm'), farmManagement.cancelEggSale)
 
 router.get('/sale-egg-bill/:billId', validateToken(['owner', 'admin', 'worker']), setCollection('farm'), farmManagement.getEggBill)
 

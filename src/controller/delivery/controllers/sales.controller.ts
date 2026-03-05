@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express'
 import { ok } from '../utils/response'
 import { getPagination } from '../utils/pagination'
 import {
+  cancelSale,
   createSale,
   deleteSale,
   getSale,
@@ -161,6 +162,16 @@ export const remove = async (req: Request, res: Response, next: NextFunction): P
     const saleModel = (req as any).CollectionDeliverySale
     const result = await deleteSale(saleModel, req.params.id)
     res.json(ok(result))
+  } catch (error) {
+    next(error)
+  }
+}
+
+export const cancel = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const saleModel = (req as any).CollectionDeliverySale
+    const sale = await cancelSale(saleModel, req.params.id)
+    res.json(ok(sale))
   } catch (error) {
     next(error)
   }
