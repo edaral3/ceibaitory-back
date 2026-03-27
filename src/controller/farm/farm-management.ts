@@ -39,6 +39,20 @@ const sendError = (res: any, error: any, defaultMessage = 'Internal server error
   return res.status(500).json({ message: defaultMessage })
 }
 
+const fixBatchInfoCounterIfNeeded = async (error: any, req: any): Promise<boolean> => {
+  if (error?.code !== 11000 || !error?.keyPattern?.batchInfoId) return false
+  const companyName = req.companyName.trim().toLowerCase().replaceAll(' ', '-')
+  const maxDoc = await req.CollectionBatchInfo.findOne().sort({ batchInfoId: -1 })
+  await req.CollectionBatchInfo.collection.conn.db
+    .collection('counters')
+    .updateOne(
+      { id: `batchInfo_${companyName}_seq` },
+      { $set: { seq: maxDoc?.batchInfoId ?? 0 } }
+    )
+  console.log(`[batchInfoId counter fixed] reset to ${maxDoc?.batchInfoId ?? 0}`)
+  return true
+}
+
 const startSessionWithTransaction = async () => {
   const session = await Mongoose.startSession()
   session.startTransaction()
@@ -309,6 +323,9 @@ const makeAnAction = async (req: any, res: any): Promise<void> => {
     res.send({ message: 'OK' })
   } catch (error: any) {
     await session.abortTransaction()
+    console.error('Error creating action:', error)
+    const counterFixed = await fixBatchInfoCounterIfNeeded(error, req)
+    if (counterFixed) return res.status(500).json({ message: 'Hubo un error inesperado, por favor intenta de nuevo.' })
     sendError(res, error, 'Error creating action')
   } finally {
     await session.endSession()
@@ -563,6 +580,7 @@ const chickenSale = async (req: any, res: any): Promise<void> => {
 
     for (const batchSale of chickenBatch) {
       const batch = await req.CollectionBatch.findOne({ shed: batchSale.shed, state: true })
+      if (!batch) throw { type: 400, message: `No active batch found for shed ${batchSale.shed}` }
       const newAction = {
         batchId: batch._id,
         action: BatchInfoTypeEnum.SALE,
@@ -574,15 +592,18 @@ const chickenSale = async (req: any, res: any): Promise<void> => {
       await newDoc.save({ session })
     }
 
+    await session.commitTransaction()
+
     // PDF generation (shared helper)
     const eggSaleDate = new Date(chickenSale.date)
     eggSaleDate.setHours(eggSaleDate.getHours() + 6) // Ajustar zona horaria si es necesario
     const saleDateFormatted = eggSaleDate.toLocaleDateString('es-GT')
     generateChickenPdf(res, chickenSale, saleDateFormatted)
-
-    await session.commitTransaction()
   } catch (error: any) {
     await session.abortTransaction()
+    console.error('Error creating chicken sale:', error)
+    const counterFixed = await fixBatchInfoCounterIfNeeded(error, req)
+    if (counterFixed) return res.status(500).json({ message: 'Hubo un error inesperado, por favor intenta de nuevo.' })
     sendError(res, error, 'Error creating chicken sale')
   } finally {
     await session.endSession()
