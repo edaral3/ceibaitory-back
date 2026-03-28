@@ -92,15 +92,21 @@ const getAllItems = async (req: any, res: any): Promise<any> => {
   try {
     let items: any
     if (req.collectionName === 'product') {
-      items = await req.CollectionCrud.find({ branch: req.branch, deleted: { $ne: true } }).populate('supplier')
-    } else if (req.collectionName === 'user') {
-      items = await req.CollectionCrud.find({ company: req.company, deleted: { $ne: true } }, '-pwd').populate('branch')
-    } else if (req.collectionName === 'branch') {
-      items = await req.CollectionCrud.find({ company: req.company, deleted: { $ne: true } })
-    } else if (req.collectionName === 'storeItem') {
-      items = await req.CollectionCrud.find({ company: req.company, deleted: { $ne: true } }).populate('productId', 'name _id')
-    } else {
       items = await req.CollectionCrud.find({ branch: req.branch, deleted: { $ne: true } })
+        .populate('supplier', 'name _id')
+        .lean()
+    } else if (req.collectionName === 'user') {
+      items = await req.CollectionCrud.find({ company: req.company, deleted: { $ne: true } }, '-pwd')
+        .populate('branch', 'name _id ubication')
+        .lean()
+    } else if (req.collectionName === 'branch') {
+      items = await req.CollectionCrud.find({ company: req.company, deleted: { $ne: true } }).lean()
+    } else if (req.collectionName === 'storeItem') {
+      items = await req.CollectionCrud.find({ company: req.company, deleted: { $ne: true } })
+        .populate('productId', 'name _id')
+        .lean()
+    } else {
+      items = await req.CollectionCrud.find({ branch: req.branch, deleted: { $ne: true } }).lean()
     }
     return res.send(items)
   } catch (error) {
