@@ -5,6 +5,9 @@ export interface SaleFilters {
   clientId?: string
   from?: Date
   to?: Date
+  paidFrom?: Date
+  paidTo?: Date
+  status?: string
   skip: number
   take: number
 }
@@ -80,11 +83,14 @@ export const createSale = async (ClientModel: any, SaleModel: any, data: any) =>
 
 export const listSales = async (
   SaleModel: any,
-  { clientId, from, to, skip, take }: SaleFilters
+  { clientId, from, to, paidFrom, paidTo, status, skip, take }: SaleFilters
 ) => {
   const where: any = {}
   if (clientId) {
     where.clientId = clientId
+  }
+  if (status) {
+    where.status = status
   }
   if (from || to) {
     where.soldAt = {}
@@ -93,6 +99,15 @@ export const listSales = async (
     }
     if (to) {
       where.soldAt.$lte = to
+    }
+  }
+  if (paidFrom || paidTo) {
+    where.paidAt = {}
+    if (paidFrom) {
+      where.paidAt.$gte = paidFrom
+    }
+    if (paidTo) {
+      where.paidAt.$lte = paidTo
     }
   }
 

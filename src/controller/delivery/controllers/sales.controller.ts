@@ -9,7 +9,7 @@ import {
   listSales,
   updateSale
 } from '../services/sales.service'
-import { increaseCashBalance } from '../services/cash-balance.service'
+import { increaseCashBalance, decreaseCashBalance } from '../services/cash-balance.service'
 import { listVisitClients, toggleVisit } from '../services/visits.service'
 import { AppError } from '../utils/errors'
 import { generateDeliveryReceipt } from '../utils/receipt'
@@ -101,14 +101,20 @@ export const list = async (req: Request, res: Response, next: NextFunction): Pro
   try {
     const { page, pageSize, skip, take } = getPagination(req.query.page, req.query.pageSize)
     const clientId = typeof req.query.clientId === 'string' ? req.query.clientId : undefined
+    const status = typeof req.query.status === 'string' ? req.query.status : undefined
     const from = parseDate(req.query.from, 'from')
     const to = parseDate(req.query.to, 'to')
+    const paidFrom = parseDate(req.query.paidFrom, 'paidFrom')
+    const paidTo = parseDate(req.query.paidTo, 'paidTo')
 
     const saleModel = (req as any).CollectionDeliverySale
     const { total, items } = await listSales(saleModel, {
       clientId,
       from,
       to,
+      paidFrom,
+      paidTo,
+      status,
       skip,
       take
     })
@@ -170,7 +176,14 @@ export const remove = async (req: Request, res: Response, next: NextFunction): P
 export const cancel = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const saleModel = (req as any).CollectionDeliverySale
+    const balanceModel = (req as any).CollectionDeliveryCashBalance
+    const existing = await saleModel.findOne({ _id: req.params.id })
+    const wasPaid = existing?.status === 'paid'
+    const paidTotal = Number(existing?.total) || 0
     const sale = await cancelSale(saleModel, req.params.id)
+    if (balanceModel && wasPaid && paidTotal > 0) {
+      await decreaseCashBalance(balanceModel, paidTotal)
+    }
     res.json(ok(sale))
   } catch (error) {
     next(error)
