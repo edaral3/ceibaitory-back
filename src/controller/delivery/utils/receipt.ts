@@ -225,10 +225,32 @@ const renderDeliveryReceiptContent = (doc: PDFDocument, sale: any, saleDate: str
   if (sale?.status === 'pending') {
     const left = doc.page.margins.left
     const width = doc.page.width - doc.page.margins.left - doc.page.margins.right
-    doc.font('Helvetica-Bold')
-      .fontSize(20)
-      .fillColor('#b91c1c')
-      .text('Pendiente de pago.', left, doc.y, { width, align: 'left', lineBreak: false })
+    const payments = Array.isArray(sale.payments) ? sale.payments : []
+    const paidAmount = payments.reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0)
+    const remaining = Math.max(0, (Number(sale.total) || 0) - paidAmount)
+
+    if (paidAmount > 0) {
+      doc.moveTo(left, doc.y).lineTo(left + width, doc.y).stroke('#d1d5db')
+      doc.moveDown(0.4)
+      doc.font('Helvetica')
+        .fontSize(10)
+        .fillColor('#1f2937')
+        .text(`Abonado: ${formatCurrency(paidAmount)}`, left, doc.y, { width, align: 'left' })
+      doc.font('Helvetica-Bold')
+        .fontSize(10)
+        .fillColor('#b91c1c')
+        .text(`Saldo pendiente: ${formatCurrency(remaining)}`, left, doc.y, { width, align: 'left' })
+      doc.moveDown(0.4)
+      doc.font('Helvetica-Bold')
+        .fontSize(14)
+        .fillColor('#b91c1c')
+        .text('Pago parcial - Saldo pendiente.', left, doc.y, { width, align: 'left' })
+    } else {
+      doc.font('Helvetica-Bold')
+        .fontSize(20)
+        .fillColor('#b91c1c')
+        .text('Pendiente de pago.', left, doc.y, { width, align: 'left', lineBreak: false })
+    }
     doc.moveDown(0.4)
   }
 }

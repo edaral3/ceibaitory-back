@@ -178,11 +178,11 @@ export const cancel = async (req: Request, res: Response, next: NextFunction): P
     const saleModel = (req as any).CollectionDeliverySale
     const balanceModel = (req as any).CollectionDeliveryCashBalance
     const existing = await saleModel.findOne({ _id: req.params.id })
-    const wasPaid = existing?.status === 'paid'
-    const paidTotal = Number(existing?.total) || 0
+    const payments = Array.isArray(existing?.payments) ? existing.payments : []
+    const paidAmount = payments.reduce((sum: number, p: any) => sum + (Number(p?.amount) || 0), 0)
     const sale = await cancelSale(saleModel, req.params.id)
-    if (balanceModel && wasPaid && paidTotal > 0) {
-      await decreaseCashBalance(balanceModel, paidTotal)
+    if (balanceModel && paidAmount > 0) {
+      await decreaseCashBalance(balanceModel, paidAmount)
     }
     res.json(ok(sale))
   } catch (error) {

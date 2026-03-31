@@ -586,7 +586,9 @@ const chickenSale = async (req: any, res: any): Promise<void> => {
         action: BatchInfoTypeEnum.SALE,
         amount: batchSale.amount,
         price: client.salePrice,
-        chikenSale: chickenSale._id
+        chikenSale: chickenSale._id,
+        createdAt: saleDate ? new Date(saleDate) : new Date(),
+        updatedAt: saleDate ? new Date(saleDate) : new Date(),
       }
       const newDoc = new req.CollectionBatchInfo(newAction)
       await newDoc.save({ session })
