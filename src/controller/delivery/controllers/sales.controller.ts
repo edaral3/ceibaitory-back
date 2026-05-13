@@ -46,6 +46,11 @@ const formatDateKey = (value: Date): string => {
   return `${year}-${month}-${day}`
 }
 
+const getPaidAmount = (sale: any): number => {
+  const payments = Array.isArray(sale?.payments) ? sale.payments : []
+  return payments.reduce((sum: number, payment: any) => sum + (Number(payment?.amount) || 0), 0)
+}
+
 export const create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const clientModel = (req as any).CollectionDeliveryClient
@@ -166,7 +171,13 @@ export const receipt = async (req: Request, res: Response, next: NextFunction): 
 export const remove = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const saleModel = (req as any).CollectionDeliverySale
+    const balanceModel = (req as any).CollectionDeliveryCashBalance
+    const existing = await saleModel.findOne({ _id: req.params.id })
+    const paidAmount = getPaidAmount(existing)
     const result = await deleteSale(saleModel, req.params.id)
+    if (balanceModel && paidAmount > 0) {
+      await decreaseCashBalance(balanceModel, paidAmount)
+    }
     res.json(ok(result))
   } catch (error) {
     next(error)
@@ -178,8 +189,7 @@ export const cancel = async (req: Request, res: Response, next: NextFunction): P
     const saleModel = (req as any).CollectionDeliverySale
     const balanceModel = (req as any).CollectionDeliveryCashBalance
     const existing = await saleModel.findOne({ _id: req.params.id })
-    const payments = Array.isArray(existing?.payments) ? existing.payments : []
-    const paidAmount = payments.reduce((sum: number, p: any) => sum + (Number(p?.amount) || 0), 0)
+    const paidAmount = getPaidAmount(existing)
     const sale = await cancelSale(saleModel, req.params.id)
     if (balanceModel && paidAmount > 0) {
       await decreaseCashBalance(balanceModel, paidAmount)

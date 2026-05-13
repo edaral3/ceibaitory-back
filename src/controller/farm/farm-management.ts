@@ -862,7 +862,12 @@ const eggSale = async (req: any, res: any): Promise<void> => {
 
 const eggSales = async (req: any, res: any): Promise<void> => {
   try {
-    const sales = await req.CollectionEggSale.find().limit(100).sort({ date: -1 })
+    const rawLimit = Number(req.query?.limit)
+    const query = req.CollectionEggSale.find().sort({ date: -1 })
+    if (Number.isFinite(rawLimit) && rawLimit > 0) {
+      query.limit(Math.min(Math.trunc(rawLimit), 1000))
+    }
+    const sales = await query
     res.send(sales)
   } catch (error: any) {
     sendError(res, error, 'Error getting sales')

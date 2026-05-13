@@ -205,7 +205,11 @@ export const deleteSale = async (SaleModel: any, id: string) => {
   if (!existing) {
     throw new AppError('NOT_FOUND', 'Sale not found', 404)
   }
-  await SaleModel.deleteOne({ _id: id })
+  if (existing.status === 'cancelled') {
+    throw new AppError('BAD_REQUEST', 'Sale is already cancelled', 400)
+  }
+  existing.status = 'cancelled'
+  await existing.save()
   return { id }
 }
 
