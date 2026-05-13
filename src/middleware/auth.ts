@@ -33,6 +33,7 @@ const validateToken = (roles: string[]) => {
         })
       }
       req.userId = decoded.userId
+      req.roles = decoded.roles
       req.companyName = decoded.company.name
       req.company = decoded.company._id
       req.branch = req.headers.branch

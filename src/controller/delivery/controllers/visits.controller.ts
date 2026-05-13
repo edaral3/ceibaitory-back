@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express'
+import type { Request, Response, NextFunction } from 'express'
 import { ok } from '../utils/response'
 import { AppError } from '../utils/errors'
 import { listVisits, listVisitClients, toggleVisit, upsertVisitAssignment } from '../services/visits.service'

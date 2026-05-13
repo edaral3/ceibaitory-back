@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from 'express'
-import Joi from 'joi'
+import type { Request, Response, NextFunction } from 'express'
+import type Joi from 'joi'
 import { AppError } from '../utils/errors'
 
 export const validateBody = (schema: Joi.ObjectSchema) => {

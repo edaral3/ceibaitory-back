@@ -1,11 +1,13 @@
-import { Request, Response, NextFunction } from 'express'
+import type { Request, Response, NextFunction } from 'express'
 import { ok } from '../utils/response'
-import { getCashBalance } from '../services/cash-balance.service'
+import { reconcileCashBalance } from '../services/cash-balance.service'
 
 export const get = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const balanceModel = (req as any).CollectionDeliveryCashBalance
-    const balance = await getCashBalance(balanceModel)
+    const saleModel = (req as any).CollectionDeliverySale
+    const eggSaleModel = (req as any).CollectionEggSale
+    const balance = await reconcileCashBalance(balanceModel, saleModel, eggSaleModel)
     res.json(
       ok({
         id: balance.id ?? balance._id,

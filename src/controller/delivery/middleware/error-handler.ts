@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express'
+import type { Request, Response, NextFunction } from 'express'
 import { MulterError } from 'multer'
 import { AppError } from '../utils/errors'
 import { fail } from '../utils/response'

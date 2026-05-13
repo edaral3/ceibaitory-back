@@ -1,5 +1,5 @@
 import { v4 as uuid } from 'uuid'
-import { Request, Response, NextFunction } from 'express'
+import type { Request, Response, NextFunction } from 'express'
 
 export const requestId = (req: Request, res: Response, next: NextFunction): void => {
   const existing = req.headers['x-request-id']

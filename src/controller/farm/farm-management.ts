@@ -1,5 +1,5 @@
 import Mongoose, { type ClientSession } from 'mongoose'
-import { decreaseCashBalance, getCashBalance, increaseCashBalance } from '../delivery/services/cash-balance.service'
+import { decreaseCashBalance, increaseCashBalance, reconcileCashBalance } from '../delivery/services/cash-balance.service'
 import BatchInfoTypeEnum from '../../enum/batch-info-type.enum'
 import ConcentrateStoreInfoEnum from '../../enum/concentrate-store-info.enum'
 import PDFDocument from 'pdfkit'
@@ -10,6 +10,9 @@ const EXTRA_VERTICAL_SPACE = 2 * CM_TO_POINTS
 const MEASURE_PAGE_HEIGHT = 2000
 const EGG_BORDER_INSET = 6
 const EGG_BORDER_WIDTH = 2.5
+const MONEY_TOLERANCE = 0.1
+
+const toMoney = (value: number): number => Math.round((value + Number.EPSILON) * 100) / 100
 
 type TableColumn = {
   label: string
@@ -35,8 +38,31 @@ type TableRow = RowCell[]
 
 // ---------- Helpers ------------------------------------------------------
 const sendError = (res: any, error: any, defaultMessage = 'Internal server error') => {
-  if (error?.type === 400) return res.status(400).json({ message: error.message })
+  if ([400, 401, 403, 404].includes(error?.type)) return res.status(error.type).json({ message: error.message })
   return res.status(500).json({ message: defaultMessage })
+}
+
+const getEggSalePaidAmount = (sale: any): number => {
+  const paidAmount = Number(sale?.paidAmount)
+  if (Number.isFinite(paidAmount) && paidAmount > 0) return toMoney(paidAmount)
+  return sale?.paid === true ? toMoney(Number(sale?.total) || 0) : 0
+}
+
+const getEggSaleRemainingAmount = (sale: any): number => {
+  return toMoney(Math.max((Number(sale?.total) || 0) - getEggSalePaidAmount(sale), 0))
+}
+
+const isEggSaleSettled = (sale: any): boolean => {
+  if (sale?.paid === true) return true
+  const paidAmount = getEggSalePaidAmount(sale)
+  if (paidAmount <= 0) return false
+  return getEggSaleRemainingAmount(sale) <= MONEY_TOLERANCE
+}
+
+const normalizeEggSaleForResponse = (sale: any): any => {
+  const data = sale?.toObject ? sale.toObject() : sale
+  if (!data || data.cancelled === true || data.paid === true || !isEggSaleSettled(data)) return data
+  return { ...data, paid: true, roundingAdjusted: true }
 }
 
 const fixBatchInfoCounterIfNeeded = async (error: any, req: any): Promise<boolean> => {
@@ -315,6 +341,9 @@ const makeAnAction = async (req: any, res: any): Promise<void> => {
       case BatchInfoTypeEnum.WASTED:
         await simpleAction(req, foundBatch, action, session)
         break
+      case BatchInfoTypeEnum.SALE:
+        await henSaleAction(req, foundBatch, session)
+        break
       default:
         throw { type: 400, message: 'Invalid action' }
     }
@@ -427,6 +456,32 @@ const simpleAction = async (req: any, batch: any, action: BatchInfoTypeEnum, ses
     ...req.body
   }
   const newDoc = new req.CollectionBatchInfo(newAction)
+  await newDoc.save({ session })
+}
+
+const henSaleAction = async (req: any, batch: any, session: ClientSession): Promise<void> => {
+  const role = String(req.roles || '').toLowerCase().trim()
+  if (!['owner', 'admin', 'owner-farm'].includes(role)) {
+    throw { type: 403, message: 'Only owner or admin can record hen sales' }
+  }
+
+  if (String(batch.birdType || '').toUpperCase() !== 'GALLINA') {
+    throw { type: 400, message: 'Hen sales can only be recorded on hen batches' }
+  }
+
+  const amount = Number(req.body.amount)
+  const price = Number(req.body.price)
+  if (!Number.isFinite(amount) || amount <= 0 || !Number.isFinite(price) || price <= 0) {
+    throw { type: 400, message: 'Invalid hen sale amount or price' }
+  }
+
+  const newDoc = new req.CollectionBatchInfo({
+    batchId: batch._id,
+    action: BatchInfoTypeEnum.SALE,
+    amount,
+    price,
+    description: req.body.description
+  })
   await newDoc.save({ session })
 }
 
@@ -848,6 +903,7 @@ const eggSale = async (req: any, res: any): Promise<void> => {
       else total += (itemPrice / 12) * item.amount
     }
 
+    total = toMoney(total)
     const eggSale = new req.CollectionEggSale({ size, type, amount, price, total, date: saleDate })
     await eggSale.save()
 
@@ -868,7 +924,7 @@ const eggSales = async (req: any, res: any): Promise<void> => {
       query.limit(Math.min(Math.trunc(rawLimit), 1000))
     }
     const sales = await query
-    res.send(sales)
+    res.send(sales.map(normalizeEggSaleForResponse))
   } catch (error: any) {
     sendError(res, error, 'Error getting sales')
   }
@@ -903,33 +959,47 @@ const updateEggBillState = async (req: any, res: any): Promise<void> => {
     if (Number.isNaN(paymentAmount) || paymentAmount <= 0) {
       throw { type: 400, message: 'Invalid amount' }
     }
-    const toMoney = (value: number): number => Math.round((value + Number.EPSILON) * 100) / 100
     const currentPaid = toMoney(Number(eggSale.paidAmount ?? 0))
     const total = toMoney(Number(eggSale.total ?? 0))
     const pendingAmount = toMoney(Math.max(total - currentPaid, 0))
+    if (currentPaid > 0 && pendingAmount <= MONEY_TOLERANCE) {
+      const updated = await req.CollectionEggSale.findByIdAndUpdate(
+        billId,
+        { $set: { paid: true, paidAt: eggSale.paidAt ?? new Date() } },
+        { new: true }
+      )
+      res.send(normalizeEggSaleForResponse(updated))
+      return
+    }
     const appliedAmount = toMoney(Math.min(paymentAmount, pendingAmount))
     if (appliedAmount <= 0) {
       throw { type: 400, message: 'Sale is already paid' }
     }
     if (req.CollectionDeliveryCashBalance) {
-      const balance = await getCashBalance(req.CollectionDeliveryCashBalance)
+      const balance = await reconcileCashBalance(
+        req.CollectionDeliveryCashBalance,
+        req.CollectionDeliverySale,
+        req.CollectionEggSale
+      )
       const availableBalance = toMoney(Number(balance?.balance ?? 0))
       if (appliedAmount > availableBalance) {
         throw { type: 400, message: 'Insufficient delivery cash balance' }
       }
     }
     const nextPaid = toMoney(currentPaid + appliedAmount)
-    const nextPaidAt = nextPaid >= total ? new Date() : eggSale.paidAt ?? null
+    const remainingAfterPayment = toMoney(Math.max(total - nextPaid, 0))
+    const paid = nextPaid >= total || (nextPaid > 0 && remainingAfterPayment <= MONEY_TOLERANCE)
+    const nextPaidAt = paid ? new Date() : eggSale.paidAt ?? null
 
     const updated = await req.CollectionEggSale.findByIdAndUpdate(
       billId,
-      { $set: { paid: nextPaid >= total, paidAmount: nextPaid, paidAt: nextPaidAt } },
+      { $set: { paid, paidAmount: nextPaid, paidAt: nextPaidAt } },
       { new: true }
     )
     if (req.CollectionDeliveryCashBalance && appliedAmount > 0) {
       await decreaseCashBalance(req.CollectionDeliveryCashBalance, appliedAmount)
     }
-    res.send(updated)
+    res.send(normalizeEggSaleForResponse(updated))
   } catch (error: any) {
     sendError(res, error, 'Error updating bill')
   }
@@ -962,7 +1032,7 @@ const eggSalesBetween = async (req: any, res: any): Promise<void> => {
       date: { $gte: start, $lt: end },
       cancelled: { $ne: true }
     })
-    res.send(sales)
+    res.send(sales.map(normalizeEggSaleForResponse))
   } catch (error: any) {
     sendError(res, error, 'Error getting sales between dates')
   }
@@ -1017,7 +1087,7 @@ const cancelEggSale = async (req: any, res: any): Promise<void> => {
     const sale = await req.CollectionEggSale.findById(id)
     if (!sale) throw { type: 404, message: 'Sale not found' }
     if (sale.cancelled === true) throw { type: 400, message: 'Sale is already cancelled' }
-    const paidAmount = Math.round(((Number(sale.paidAmount ?? 0) || 0) + Number.EPSILON) * 100) / 100
+    const paidAmount = getEggSalePaidAmount(sale)
     await req.CollectionEggSale.findByIdAndUpdate(id, { $set: { cancelled: true } })
     if (req.CollectionDeliveryCashBalance && paidAmount > 0) {
       await increaseCashBalance(req.CollectionDeliveryCashBalance, paidAmount)
