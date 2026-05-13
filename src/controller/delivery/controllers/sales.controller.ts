@@ -13,6 +13,7 @@ import { increaseCashBalance, decreaseCashBalance } from '../services/cash-balan
 import { listVisitClients, toggleVisit } from '../services/visits.service'
 import { AppError } from '../utils/errors'
 import { generateDeliveryReceipt } from '../utils/receipt'
+import { toMoney } from '../utils/payments'
 
 const mapSale = (sale: any): any => {
   const json = sale?.toJSON ? sale.toJSON() : sale
@@ -48,7 +49,7 @@ const formatDateKey = (value: Date): string => {
 
 const getPaidAmount = (sale: any): number => {
   const payments = Array.isArray(sale?.payments) ? sale.payments : []
-  return payments.reduce((sum: number, payment: any) => sum + (Number(payment?.amount) || 0), 0)
+  return toMoney(payments.reduce((sum: number, payment: any) => sum + (Number(payment?.amount) || 0), 0))
 }
 
 export const create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -61,10 +62,7 @@ export const create = async (req: Request, res: Response, next: NextFunction): P
     const carryoverModel = (req as any).CollectionDeliveryVisitCarryover
     const sale = await createSale(clientModel, saleModel, req.body)
     if (balanceModel && Array.isArray(sale?.payments) && sale.payments.length > 0) {
-      const paidAmount = sale.payments.reduce(
-        (sum: number, payment: any) => sum + (Number(payment?.amount) || 0),
-        0
-      )
+      const paidAmount = getPaidAmount(sale)
       if (paidAmount > 0) {
         await increaseCashBalance(balanceModel, paidAmount)
       }
@@ -145,10 +143,9 @@ export const update = async (req: Request, res: Response, next: NextFunction): P
   try {
     const saleModel = (req as any).CollectionDeliverySale
     const balanceModel = (req as any).CollectionDeliveryCashBalance
-    const sale = await updateSale(saleModel, req.params.id, req.body)
-    const paymentAmount = Number(req.body?.payment?.amount)
-    if (balanceModel && Number.isFinite(paymentAmount) && paymentAmount > 0) {
-      await increaseCashBalance(balanceModel, paymentAmount)
+    const { sale, paymentDelta } = await updateSale(saleModel, req.params.id, req.body)
+    if (balanceModel && paymentDelta > 0) {
+      await increaseCashBalance(balanceModel, paymentDelta)
     }
     res.json(ok(sale))
   } catch (error) {

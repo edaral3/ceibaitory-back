@@ -328,9 +328,13 @@ export const generateCreditPdf = (
   const purchaseDate = new Date(credit.date).toLocaleString("es-MX", {
     timeZone: "America/Guatemala",
   });
-  doc.autoTable(buildCreditInfo(purchaseDate, credit.client.name, credit.client.nit));
+  doc.autoTable(buildCreditInfo(
+    purchaseDate,
+    credit.client?.name ?? "Cliente no disponible",
+    credit.client?.nit ?? "CF"
+  ));
 
-  const payments = credit.payments.map((payment, index) => [
+  const payments = (credit.payments ?? []).map((payment, index) => [
     index + 1,
     currency(payment.amount),
     new Date(payment.date).toLocaleString("es-MX", {
@@ -338,7 +342,7 @@ export const generateCreditPdf = (
     }),
   ]);
 
-  const products = credit.products.map((product, index) => [
+  const products = (credit.products ?? []).map((product, index) => [
     index + 1,
     product.name,
     product.amount,

@@ -35,9 +35,9 @@ export interface CreditPayment {
 
 export interface CreditDocument {
   date: Date | string;
-  client: { name: string; nit: string };
+  client?: { name?: string; nit?: string } | null;
   products: SaleProduct[];
-  payments: CreditPayment[];
+  payments?: CreditPayment[];
   total: number;
   paid: number;
 }

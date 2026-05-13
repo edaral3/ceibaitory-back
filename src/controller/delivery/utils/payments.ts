@@ -10,7 +10,7 @@ export interface PaymentSummary {
   paidAt: Date | null
 }
 
-const toMoney = (value: number): number => Math.round((value + Number.EPSILON) * 100) / 100
+export const toMoney = (value: number): number => Math.round((value + Number.EPSILON) * 100) / 100
 
 export const normalizePayments = (payments: PaymentInput[] = []): PaymentInput[] => {
   return payments.map((payment) => ({
@@ -21,7 +21,9 @@ export const normalizePayments = (payments: PaymentInput[] = []): PaymentInput[]
 }
 
 export const getPaymentSummary = (total: number, payments: PaymentInput[]): PaymentSummary => {
-  const paidAmount = toMoney(payments.reduce((sum, payment) => sum + payment.amount, 0))
+  const paidAmount = toMoney(
+    payments.reduce((sum, payment) => sum + (Number(payment?.amount) || 0), 0)
+  )
   const totalValue = toMoney(Number(total) || 0)
   if (paidAmount >= totalValue) {
     const lastPayment = payments[payments.length - 1]

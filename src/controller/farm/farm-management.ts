@@ -955,8 +955,9 @@ const updateEggBillState = async (req: any, res: any): Promise<void> => {
     const eggSale = await req.CollectionEggSale.findById(billId)
     if (!eggSale) throw { type: 400, message: 'Bill not found' }
     if (eggSale.paid === true) throw { type: 400, message: 'Sale is already paid' }
-    const paymentAmount = Number(req.body?.amount ?? eggSale.total)
-    if (Number.isNaN(paymentAmount) || paymentAmount <= 0) {
+    const closeSale = req.body?.close === true
+    const paymentAmount = closeSale ? 0 : Number(req.body?.amount ?? eggSale.total)
+    if (!closeSale && (Number.isNaN(paymentAmount) || paymentAmount <= 0)) {
       throw { type: 400, message: 'Invalid amount' }
     }
     const currentPaid = toMoney(Number(eggSale.paidAmount ?? 0))
@@ -971,8 +972,8 @@ const updateEggBillState = async (req: any, res: any): Promise<void> => {
       res.send(normalizeEggSaleForResponse(updated))
       return
     }
-    const appliedAmount = toMoney(Math.min(paymentAmount, pendingAmount))
-    if (appliedAmount <= 0) {
+    let appliedAmount = closeSale ? 0 : toMoney(Math.min(paymentAmount, pendingAmount))
+    if (!closeSale && appliedAmount <= 0) {
       throw { type: 400, message: 'Sale is already paid' }
     }
     if (req.CollectionDeliveryCashBalance) {
@@ -982,13 +983,15 @@ const updateEggBillState = async (req: any, res: any): Promise<void> => {
         req.CollectionEggSale
       )
       const availableBalance = toMoney(Number(balance?.balance ?? 0))
-      if (appliedAmount > availableBalance) {
+      if (closeSale) {
+        appliedAmount = toMoney(Math.min(pendingAmount, availableBalance))
+      } else if (appliedAmount > availableBalance) {
         throw { type: 400, message: 'Insufficient delivery cash balance' }
       }
     }
     const nextPaid = toMoney(currentPaid + appliedAmount)
     const remainingAfterPayment = toMoney(Math.max(total - nextPaid, 0))
-    const paid = nextPaid >= total || (nextPaid > 0 && remainingAfterPayment <= MONEY_TOLERANCE)
+    const paid = closeSale || nextPaid >= total || (nextPaid > 0 && remainingAfterPayment <= MONEY_TOLERANCE)
     const nextPaidAt = paid ? new Date() : eggSale.paidAt ?? null
 
     const updated = await req.CollectionEggSale.findByIdAndUpdate(

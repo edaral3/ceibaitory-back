@@ -1,5 +1,5 @@
 import { AppError } from '../utils/errors'
-import { getPaymentSummary, normalizePayments } from '../utils/payments'
+import { getPaymentSummary, normalizePayments, toMoney } from '../utils/payments'
 
 export interface SaleFilters {
   clientId?: string
@@ -178,13 +178,15 @@ export const updateSale = async (SaleModel: any, id: string, data: any) => {
     existing.total = data.total
   }
 
+  const previousPaidAmount = getPaymentSummary(Number(existing.total) || 0, existing.payments ?? []).paidAmount
+
   if (data.payment) {
     existing.payments = existing.payments ?? []
-    existing.payments.push({
-      amount: data.payment.amount,
-      paidAt: data.payment.paidAt ?? new Date(),
-      note: data.payment.note
-    })
+    const [payment] = normalizePayments([data.payment])
+    if (!payment || payment.amount <= 0) {
+      throw new AppError('BAD_REQUEST', 'Payment amount must be positive', 400)
+    }
+    existing.payments.push(payment)
   }
 
   const payments = existing.payments ?? []
@@ -197,7 +199,10 @@ export const updateSale = async (SaleModel: any, id: string, data: any) => {
   existing.paidAt = summary.paidAt
 
   await existing.save()
-  return existing
+  return {
+    sale: existing,
+    paymentDelta: data.payment ? toMoney(Math.max(0, summary.paidAmount - previousPaidAmount)) : 0
+  }
 }
 
 export const deleteSale = async (SaleModel: any, id: string) => {
