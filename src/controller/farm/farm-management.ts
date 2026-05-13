@@ -1,5 +1,5 @@
 import Mongoose, { type ClientSession } from 'mongoose'
-import { decreaseCashBalance } from '../delivery/services/cash-balance.service'
+import { decreaseCashBalance, getCashBalance, increaseCashBalance } from '../delivery/services/cash-balance.service'
 import BatchInfoTypeEnum from '../../enum/batch-info-type.enum'
 import ConcentrateStoreInfoEnum from '../../enum/concentrate-store-info.enum'
 import PDFDocument from 'pdfkit'
@@ -901,7 +901,19 @@ const updateEggBillState = async (req: any, res: any): Promise<void> => {
     const toMoney = (value: number): number => Math.round((value + Number.EPSILON) * 100) / 100
     const currentPaid = toMoney(Number(eggSale.paidAmount ?? 0))
     const total = toMoney(Number(eggSale.total ?? 0))
-    const nextPaid = toMoney(Math.min(currentPaid + paymentAmount, total))
+    const pendingAmount = toMoney(Math.max(total - currentPaid, 0))
+    const appliedAmount = toMoney(Math.min(paymentAmount, pendingAmount))
+    if (appliedAmount <= 0) {
+      throw { type: 400, message: 'Sale is already paid' }
+    }
+    if (req.CollectionDeliveryCashBalance) {
+      const balance = await getCashBalance(req.CollectionDeliveryCashBalance)
+      const availableBalance = toMoney(Number(balance?.balance ?? 0))
+      if (appliedAmount > availableBalance) {
+        throw { type: 400, message: 'Insufficient delivery cash balance' }
+      }
+    }
+    const nextPaid = toMoney(currentPaid + appliedAmount)
     const nextPaidAt = nextPaid >= total ? new Date() : eggSale.paidAt ?? null
 
     const updated = await req.CollectionEggSale.findByIdAndUpdate(
@@ -909,8 +921,8 @@ const updateEggBillState = async (req: any, res: any): Promise<void> => {
       { $set: { paid: nextPaid >= total, paidAmount: nextPaid, paidAt: nextPaidAt } },
       { new: true }
     )
-    if (req.CollectionDeliveryCashBalance && paymentAmount > 0) {
-      await decreaseCashBalance(req.CollectionDeliveryCashBalance, paymentAmount)
+    if (req.CollectionDeliveryCashBalance && appliedAmount > 0) {
+      await decreaseCashBalance(req.CollectionDeliveryCashBalance, appliedAmount)
     }
     res.send(updated)
   } catch (error: any) {
@@ -1000,7 +1012,11 @@ const cancelEggSale = async (req: any, res: any): Promise<void> => {
     const sale = await req.CollectionEggSale.findById(id)
     if (!sale) throw { type: 404, message: 'Sale not found' }
     if (sale.cancelled === true) throw { type: 400, message: 'Sale is already cancelled' }
+    const paidAmount = Math.round(((Number(sale.paidAmount ?? 0) || 0) + Number.EPSILON) * 100) / 100
     await req.CollectionEggSale.findByIdAndUpdate(id, { $set: { cancelled: true } })
+    if (req.CollectionDeliveryCashBalance && paidAmount > 0) {
+      await increaseCashBalance(req.CollectionDeliveryCashBalance, paidAmount)
+    }
     res.send({ message: 'OK' })
   } catch (error: any) {
     sendError(res, error, 'Error cancelling egg sale')
