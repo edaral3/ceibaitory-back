@@ -12,6 +12,23 @@ export interface SaleFilters {
   take: number
 }
 
+const normalizeSaleItems = (rawItems: any[] = []) => {
+  const items = rawItems.map((item: any) => {
+    const quantity = Number(item.quantity) || 0
+    const unitPrice = Number(item.unitPrice) || 0
+    return {
+      eggType: item.eggType,
+      eggSize: item.eggSize,
+      quantity,
+      unitPrice,
+      lineTotal: toMoney(unitPrice * quantity)
+    }
+  })
+
+  const total = toMoney(items.reduce((sum: number, item: any) => sum + item.lineTotal, 0))
+  return { items, total }
+}
+
 export const createSale = async (ClientModel: any, SaleModel: any, data: any) => {
   const client = await ClientModel.findOne({ _id: data.clientId, deletedAt: null })
   if (!client) {
@@ -32,21 +49,7 @@ export const createSale = async (ClientModel: any, SaleModel: any, data: any) =>
       ]
     }
 
-    const items = rawItems.map((item: any) => {
-      const quantity = Number(item.quantity) || 0
-      const unitPrice = Number(item.unitPrice) || 0
-      return {
-        eggType: item.eggType,
-        eggSize: item.eggSize,
-        quantity,
-        unitPrice,
-        lineTotal: unitPrice * quantity
-      }
-    })
-
-    const rawTotal = items.reduce((sum: number, item: any) => sum + item.lineTotal, 0)
-    const total = Math.round((rawTotal + Number.EPSILON) * 100) / 100
-    return { items, total }
+    return normalizeSaleItems(rawItems)
   }
 
   const { items, total } = normalizeItems()
@@ -144,21 +147,12 @@ export const updateSale = async (SaleModel: any, id: string, data: any) => {
     throw new AppError('BAD_REQUEST', 'Cannot modify a cancelled sale', 400)
   }
 
-  if (Array.isArray(data.items) && data.items.length > 0) {
-    const items = data.items.map((item: any) => {
-      const quantity = Number(item.quantity) || 0
-      const unitPrice = Number(item.unitPrice) || 0
-      return {
-        eggType: item.eggType,
-        eggSize: item.eggSize,
-        quantity,
-        unitPrice,
-        lineTotal: unitPrice * quantity
-      }
-    })
+  const hasItemUpdates = Array.isArray(data.items) && data.items.length > 0
+
+  if (hasItemUpdates) {
+    const { items, total } = normalizeSaleItems(data.items)
     existing.items = items
-    const rawTotal = items.reduce((sum: number, item: any) => sum + item.lineTotal, 0)
-    existing.total = Math.round((rawTotal + Number.EPSILON) * 100) / 100
+    existing.total = total
     existing.eggType = items[0]?.eggType ?? existing.eggType
     existing.eggSize = items[0]?.eggSize ?? existing.eggSize
     existing.unitPrice = items[0]?.unitPrice ?? existing.unitPrice
@@ -174,7 +168,7 @@ export const updateSale = async (SaleModel: any, id: string, data: any) => {
   if (data.soldAt !== undefined) {
     existing.soldAt = data.soldAt
   }
-  if (data.total !== undefined) {
+  if (data.total !== undefined && !hasItemUpdates) {
     existing.total = data.total
   }
 
