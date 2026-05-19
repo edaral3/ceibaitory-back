@@ -72,6 +72,7 @@ const setCollection = (collectionName: string) => {
         req.CollectionDeliveryVisitAssignment = getCollection('deliveryVisitAssignment', companyName)
         req.CollectionDeliveryVisitCarryover = getCollection('deliveryVisitCarryover', companyName)
         req.CollectionDeliveryCashBalance = getCollection('deliveryCashBalance', companyName)
+        req.CollectionDeliveryCashEvent = getCollection('deliveryCashEvent', companyName)
         break
       case 'store':
       case 'storeItem':

@@ -27,6 +27,7 @@ import deliveryVisit from './delivery-visit'
 import deliveryVisitAssignment from './delivery-visit-assignment'
 import deliveryVisitCarryover from './delivery-visit-carryover'
 import deliveryCashBalance from './delivery-cash-balance'
+import deliveryCashEvent from './delivery-cash-event'
 
 const models = {
   client,
@@ -55,7 +56,8 @@ const models = {
   deliveryVisit,
   deliveryVisitAssignment,
   deliveryVisitCarryover,
-  deliveryCashBalance
+  deliveryCashBalance,
+  deliveryCashEvent
 }
 
 const getCollection = (collectionName: string, companyName: string): any => {

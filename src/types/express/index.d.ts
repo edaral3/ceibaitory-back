@@ -11,6 +11,7 @@ declare module 'express-serve-static-core' {
     CollectionDeliveryVisitAssignment?: any
     CollectionDeliveryVisitCarryover?: any
     CollectionDeliveryCashBalance?: any
+    CollectionDeliveryCashEvent?: any
     companyName?: string
   }
 }

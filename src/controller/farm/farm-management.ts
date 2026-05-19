@@ -1,5 +1,11 @@
 import Mongoose, { type ClientSession } from 'mongoose'
-import { decreaseCashBalance, increaseCashBalance, reconcileCashBalance } from '../delivery/services/cash-balance.service'
+import {
+  decreaseCashBalance,
+  decreaseReceivedCashBalance,
+  increaseCashBalance,
+  increaseReceivedCashBalance,
+  reconcileCashBalance
+} from '../delivery/services/cash-balance.service'
 import BatchInfoTypeEnum from '../../enum/batch-info-type.enum'
 import ConcentrateStoreInfoEnum from '../../enum/concentrate-store-info.enum'
 import PDFDocument from 'pdfkit'
@@ -982,11 +988,11 @@ const updateEggBillState = async (req: any, res: any): Promise<void> => {
         req.CollectionDeliverySale,
         req.CollectionEggSale
       )
-      const availableBalance = toMoney(Number(balance?.balance ?? 0))
+      const adminReceivedCash = toMoney(Number(balance?.adminReceivedCash ?? balance?.receivedCash ?? 0))
       if (closeSale) {
-        appliedAmount = toMoney(Math.min(pendingAmount, availableBalance))
-      } else if (appliedAmount > availableBalance) {
-        throw { type: 400, message: 'Insufficient delivery cash balance' }
+        appliedAmount = toMoney(Math.min(pendingAmount, adminReceivedCash))
+      } else if (appliedAmount > adminReceivedCash) {
+        throw { type: 400, message: 'Insufficient received cash amount' }
       }
     }
     const nextPaid = toMoney(currentPaid + appliedAmount)
@@ -1000,6 +1006,16 @@ const updateEggBillState = async (req: any, res: any): Promise<void> => {
       { new: true }
     )
     if (req.CollectionDeliveryCashBalance && appliedAmount > 0) {
+      await decreaseReceivedCashBalance(
+        req.CollectionDeliveryCashBalance,
+        req.CollectionDeliveryCashEvent,
+        appliedAmount,
+        {
+          eggSaleId: billId,
+          eggSaleTotal: total,
+          note: 'Pago de factura de huevo'
+        }
+      )
       await decreaseCashBalance(req.CollectionDeliveryCashBalance, appliedAmount)
     }
     res.send(normalizeEggSaleForResponse(updated))
@@ -1094,6 +1110,16 @@ const cancelEggSale = async (req: any, res: any): Promise<void> => {
     await req.CollectionEggSale.findByIdAndUpdate(id, { $set: { cancelled: true } })
     if (req.CollectionDeliveryCashBalance && paidAmount > 0) {
       await increaseCashBalance(req.CollectionDeliveryCashBalance, paidAmount)
+      await increaseReceivedCashBalance(
+        req.CollectionDeliveryCashBalance,
+        req.CollectionDeliveryCashEvent,
+        paidAmount,
+        {
+          eggSaleId: id,
+          eggSaleTotal: Number(sale?.total) || null,
+          note: 'Reverso por anulación de factura de huevo'
+        }
+      )
     }
     res.send({ message: 'OK' })
   } catch (error: any) {

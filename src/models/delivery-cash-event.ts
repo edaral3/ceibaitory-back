@@ -29,11 +29,27 @@ const getSchema = (): Schema => {
         type: String,
         default: uuid
       },
-      key: {
+      eventType: {
         type: String,
-        default: 'default'
+        enum: [
+          'driver_cash_received',
+          'driver_cash_reversal',
+          'cash_received',
+          'egg_payment',
+          'egg_payment_reversal',
+          'daily_reset'
+        ],
+        required: true
       },
-      balance: {
+      dateKey: {
+        type: String,
+        required: true
+      },
+      amount: {
+        type: Number,
+        default: 0
+      },
+      deliveryBalance: {
         type: Number,
         default: 0
       },
@@ -41,47 +57,44 @@ const getSchema = (): Schema => {
         type: Number,
         default: 0
       },
-      driverReceivedCashUpdatedAt: {
-        type: Date,
-        default: null
-      },
-      driverReceivedCashDateKey: {
-        type: String,
-        default: null
-      },
       adminReceivedCash: {
         type: Number,
         default: 0
-      },
-      adminReceivedCashUpdatedAt: {
-        type: Date,
-        default: null
-      },
-      adminReceivedCashDateKey: {
-        type: String,
-        default: null
       },
       receivedCash: {
         type: Number,
         default: 0
       },
-      receivedCashUpdatedAt: {
-        type: Date,
-        default: null
+      difference: {
+        type: Number,
+        default: 0
       },
-      receivedCashDateKey: {
+      cashBefore: {
+        type: Number,
+        default: 0
+      },
+      cashAfter: {
+        type: Number,
+        default: 0
+      },
+      eggSaleId: {
         type: String,
         default: null
       },
-      lastReceivedCashResetAt: {
-        type: Date,
+      eggSaleTotal: {
+        type: Number,
         default: null
+      },
+      note: {
+        type: String,
+        default: ''
       }
     },
     { timestamps: true }
   )
 
-  schema.index({ key: 1 }, { unique: true })
+  schema.index({ dateKey: -1, createdAt: -1 })
+  schema.index({ eventType: 1, createdAt: -1 })
   withIdTransform(schema)
 
   return schema

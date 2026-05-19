@@ -9,7 +9,12 @@ import {
   listSales,
   updateSale
 } from '../services/sales.service'
-import { increaseCashBalance, decreaseCashBalance } from '../services/cash-balance.service'
+import {
+  decreaseCashBalance,
+  decreaseDriverReceivedCashBalance,
+  increaseCashBalance,
+  increaseDriverReceivedCashBalance
+} from '../services/cash-balance.service'
 import { listVisitClients, toggleVisit } from '../services/visits.service'
 import { AppError } from '../utils/errors'
 import { generateDeliveryReceipt } from '../utils/receipt'
@@ -65,6 +70,12 @@ export const create = async (req: Request, res: Response, next: NextFunction): P
       const paidAmount = getPaidAmount(sale)
       if (paidAmount > 0) {
         await increaseCashBalance(balanceModel, paidAmount)
+        await increaseDriverReceivedCashBalance(
+          balanceModel,
+          (req as any).CollectionDeliveryCashEvent,
+          paidAmount,
+          'Efectivo cobrado por repartidor'
+        )
       }
     }
     try {
@@ -146,6 +157,12 @@ export const update = async (req: Request, res: Response, next: NextFunction): P
     const { sale, paymentDelta } = await updateSale(saleModel, req.params.id, req.body)
     if (balanceModel && paymentDelta > 0) {
       await increaseCashBalance(balanceModel, paymentDelta)
+      await increaseDriverReceivedCashBalance(
+        balanceModel,
+        (req as any).CollectionDeliveryCashEvent,
+        paymentDelta,
+        'Abono cobrado por repartidor'
+      )
     }
     res.json(ok(sale))
   } catch (error) {
@@ -174,6 +191,12 @@ export const remove = async (req: Request, res: Response, next: NextFunction): P
     const result = await deleteSale(saleModel, req.params.id)
     if (balanceModel && paidAmount > 0) {
       await decreaseCashBalance(balanceModel, paidAmount)
+      await decreaseDriverReceivedCashBalance(
+        balanceModel,
+        (req as any).CollectionDeliveryCashEvent,
+        paidAmount,
+        'Reverso de efectivo del repartidor'
+      )
     }
     res.json(ok(result))
   } catch (error) {
@@ -190,6 +213,12 @@ export const cancel = async (req: Request, res: Response, next: NextFunction): P
     const sale = await cancelSale(saleModel, req.params.id)
     if (balanceModel && paidAmount > 0) {
       await decreaseCashBalance(balanceModel, paidAmount)
+      await decreaseDriverReceivedCashBalance(
+        balanceModel,
+        (req as any).CollectionDeliveryCashEvent,
+        paidAmount,
+        'Reverso de efectivo del repartidor'
+      )
     }
     res.json(ok(sale))
   } catch (error) {

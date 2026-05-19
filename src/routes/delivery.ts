@@ -57,6 +57,18 @@ router.get(
   setCollection('farm'),
   cashBalanceController.get
 )
+router.put(
+  '/delivery/cash-balance/received-cash',
+  validateToken(authRoles),
+  setCollection('farm'),
+  cashBalanceController.setReceivedCash
+)
+router.get(
+  '/delivery/cash-balance/events',
+  validateToken(authRoles),
+  setCollection('farm'),
+  cashBalanceController.listEvents
+)
 router.get(
   '/clients/:id',
   validateToken(authRoles),

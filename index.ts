@@ -21,6 +21,7 @@ import chat from './src/routes/chat'
 import farm from './src/routes/farm'
 import delivery from './src/routes/delivery'
 import { mongoConnection } from './src/mongodb/mongoConnection'
+import { startDeliveryCashResetScheduler } from './src/controller/delivery/services/cash-balance.scheduler'
 
 const app = express()
 
@@ -57,6 +58,9 @@ app.use(express.json())
 
 // Mongodb
 mongoConnection()
+if (process.env.NODE_ENV !== 'test') {
+  startDeliveryCashResetScheduler()
+}
 
 // Endpoints
 app.use('/', root)
