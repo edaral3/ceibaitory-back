@@ -41,15 +41,19 @@ const createSale = async (req: any, res: any): Promise<void> => {
         //req.body.clientName = 'Consumidor final'
       }
       req.body.clientNit = req.body.clientNit.toUpperCase()
+      const billBody = { ...req.body }
+      billBody.clientName = billBody.clientName || 'Consumidor final'
+      billBody.direction = billBody.direction || 'ciudad'
+
       const bill = await generateBill(
         req.CollectionCompany,
         req.companyName,
-        req.body
+        billBody
       )
       newBill = {
-        name: req.body.clientName,
+        name: req.body.clientName || 'Consumidor final',
         nit: req.body.clientNit,
-        direction: req.body.direction,
+        direction: req.body.direction || 'ciudad',
         uuid: bill.uuid,
         uuidEmision: bill.uuidEmision
       }
