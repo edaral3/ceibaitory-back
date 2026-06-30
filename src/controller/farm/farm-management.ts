@@ -582,7 +582,7 @@ const getStores = async (req: any, res: any): Promise<void> => {
     res.send(stores)
   } catch (error: any) {
     sendError(res, error, 'Error getting stores')
-  }
+  } 
 }
 
 const updateBatch = async (req: any, res: any): Promise<void> => {
