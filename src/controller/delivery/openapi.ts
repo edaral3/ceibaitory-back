@@ -250,7 +250,10 @@ export const openApiSpec = {
             }
           }
         },
-        responses: { '200': { description: 'OK' } }
+        responses: {
+          '200': { description: 'OK' },
+          '409': { description: 'Conflict - sale was modified by another request (concurrent payment)' }
+        }
       },
       delete: {
         summary: 'Delete sale',

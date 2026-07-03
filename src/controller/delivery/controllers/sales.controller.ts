@@ -57,6 +57,26 @@ const getPaidAmount = (sale: any): number => {
   return toMoney(payments.reduce((sum: number, payment: any) => sum + (Number(payment?.amount) || 0), 0))
 }
 
+const getGuatemalaDateKey = (date: Date = new Date()): string =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Guatemala' }).format(date)
+
+// Portion of the sale collected today (Guatemala time). Cancelling a sale only
+// reverses today's collections from the driver's daily cash; money collected on
+// previous days already went through those days' closes and must not be
+// subtracted from today's counter.
+const getPaidAmountToday = (sale: any): number => {
+  const todayKey = getGuatemalaDateKey()
+  const payments = Array.isArray(sale?.payments) ? sale.payments : []
+  return toMoney(
+    payments.reduce((sum: number, payment: any) => {
+      if (!payment?.paidAt) return sum
+      const paidAt = new Date(payment.paidAt)
+      if (Number.isNaN(paidAt.getTime())) return sum
+      return getGuatemalaDateKey(paidAt) === todayKey ? sum + (Number(payment?.amount) || 0) : sum
+    }, 0)
+  )
+}
+
 export const create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const clientModel = (req as any).CollectionDeliveryClient
@@ -188,13 +208,16 @@ export const remove = async (req: Request, res: Response, next: NextFunction): P
     const balanceModel = (req as any).CollectionDeliveryCashBalance
     const existing = await saleModel.findOne({ _id: req.params.id })
     const paidAmount = getPaidAmount(existing)
+    const paidToday = getPaidAmountToday(existing)
     const result = await deleteSale(saleModel, req.params.id)
     if (balanceModel && paidAmount > 0) {
       await decreaseCashBalance(balanceModel, paidAmount)
+    }
+    if (balanceModel && paidToday > 0) {
       await decreaseDriverReceivedCashBalance(
         balanceModel,
         (req as any).CollectionDeliveryCashEvent,
-        paidAmount,
+        paidToday,
         'Reverso de efectivo del repartidor'
       )
     }
@@ -210,13 +233,16 @@ export const cancel = async (req: Request, res: Response, next: NextFunction): P
     const balanceModel = (req as any).CollectionDeliveryCashBalance
     const existing = await saleModel.findOne({ _id: req.params.id })
     const paidAmount = getPaidAmount(existing)
+    const paidToday = getPaidAmountToday(existing)
     const sale = await cancelSale(saleModel, req.params.id)
     if (balanceModel && paidAmount > 0) {
       await decreaseCashBalance(balanceModel, paidAmount)
+    }
+    if (balanceModel && paidToday > 0) {
       await decreaseDriverReceivedCashBalance(
         balanceModel,
         (req as any).CollectionDeliveryCashEvent,
-        paidAmount,
+        paidToday,
         'Reverso de efectivo del repartidor'
       )
     }

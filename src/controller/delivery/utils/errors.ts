@@ -4,6 +4,7 @@ export type ErrorCode =
   | 'UNAUTHORIZED'
   | 'FORBIDDEN'
   | 'BAD_REQUEST'
+  | 'CONFLICT'
   | 'INTERNAL_ERROR'
 
 export class AppError extends Error {

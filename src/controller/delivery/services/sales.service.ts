@@ -57,8 +57,10 @@ export const createSale = async (ClientModel: any, SaleModel: any, data: any) =>
   const paymentsInput = Array.isArray(data.payments) ? data.payments : []
   const payments = normalizePayments(paymentsInput)
 
+  // The payment is stamped with the real collection time (not soldAt) so that
+  // "Cobrado hoy" reflects the day the cash actually entered, even on backdated sales.
   if (data.paid === true && payments.length === 0) {
-    payments.push({ amount: total, paidAt: data.soldAt ?? new Date() })
+    payments.push({ amount: total, paidAt: new Date() })
   }
 
   const summary = getPaymentSummary(total, payments)
@@ -148,54 +150,81 @@ export const updateSale = async (SaleModel: any, id: string, data: any) => {
   }
 
   const hasItemUpdates = Array.isArray(data.items) && data.items.length > 0
+  const updates: any = {}
 
   if (hasItemUpdates) {
     const { items, total } = normalizeSaleItems(data.items)
-    existing.items = items
-    existing.total = total
-    existing.eggType = items[0]?.eggType ?? existing.eggType
-    existing.eggSize = items[0]?.eggSize ?? existing.eggSize
-    existing.unitPrice = items[0]?.unitPrice ?? existing.unitPrice
-    existing.quantity = items.reduce((sum: number, item: any) => sum + (item.quantity ?? 0), 0)
+    updates.items = items
+    updates.total = total
+    updates.eggType = items[0]?.eggType ?? existing.eggType
+    updates.eggSize = items[0]?.eggSize ?? existing.eggSize
+    updates.unitPrice = items[0]?.unitPrice ?? existing.unitPrice
+    updates.quantity = items.reduce((sum: number, item: any) => sum + (item.quantity ?? 0), 0)
   }
 
   if (data.eggType !== undefined) {
-    existing.eggType = data.eggType
+    updates.eggType = data.eggType
   }
   if (data.quantity !== undefined) {
-    existing.quantity = data.quantity
+    updates.quantity = data.quantity
   }
   if (data.soldAt !== undefined) {
-    existing.soldAt = data.soldAt
+    updates.soldAt = data.soldAt
   }
   if (data.total !== undefined && !hasItemUpdates) {
-    existing.total = data.total
+    updates.total = data.total
   }
 
-  const previousPaidAmount = getPaymentSummary(Number(existing.total) || 0, existing.payments ?? []).paidAmount
+  const currentPayments = Array.isArray(existing.payments) ? existing.payments : []
+  const nextTotal = data.total !== undefined || hasItemUpdates ? Number(updates.total) : Number(existing.total)
+  const roundedTotal = toMoney(nextTotal || 0)
+  const previousPaidAmount = getPaymentSummary(roundedTotal, currentPayments).paidAmount
 
-  if (data.payment) {
-    existing.payments = existing.payments ?? []
-    const [payment] = normalizePayments([data.payment])
-    if (!payment || payment.amount <= 0) {
-      throw new AppError('BAD_REQUEST', 'Payment amount must be positive', 400)
+  if (!data.payment) {
+    Object.assign(existing, updates)
+    const summary = getPaymentSummary(roundedTotal, currentPayments)
+    if (summary.paidAmount > roundedTotal) {
+      throw new AppError('BAD_REQUEST', 'Payments exceed total', 400)
     }
-    existing.payments.push(payment)
+    existing.status = summary.status
+    existing.paidAt = summary.paidAt
+    await existing.save()
+    return { sale: existing, paymentDelta: 0 }
   }
 
-  const payments = existing.payments ?? []
-  const roundedTotal = Math.round((Number(existing.total) + Number.EPSILON) * 100) / 100
-  const summary = getPaymentSummary(roundedTotal, payments)
+  const [payment] = normalizePayments([data.payment])
+  if (!payment || payment.amount <= 0) {
+    throw new AppError('BAD_REQUEST', 'Payment amount must be positive', 400)
+  }
+
+  const nextPayments = [...currentPayments, payment]
+  const summary = getPaymentSummary(roundedTotal, nextPayments)
   if (summary.paidAmount > roundedTotal) {
     throw new AppError('BAD_REQUEST', 'Payments exceed total', 400)
   }
-  existing.status = summary.status
-  existing.paidAt = summary.paidAt
 
-  await existing.save()
+  // Atomic append: the filter only matches if the sale is still payable and no
+  // other request appended a payment since we read it, so a concurrent retry
+  // (e.g. double tap) cannot duplicate the payment or the cash counters.
+  const updated = await SaleModel.findOneAndUpdate(
+    {
+      _id: id,
+      status: { $nin: ['paid', 'cancelled'] },
+      [`payments.${currentPayments.length}`]: { $exists: false }
+    },
+    {
+      $push: { payments: payment },
+      $set: { ...updates, status: summary.status, paidAt: summary.paidAt }
+    },
+    { new: true }
+  )
+  if (!updated) {
+    throw new AppError('CONFLICT', 'Sale was modified by another request', 409)
+  }
+
   return {
-    sale: existing,
-    paymentDelta: data.payment ? toMoney(Math.max(0, summary.paidAmount - previousPaidAmount)) : 0
+    sale: updated,
+    paymentDelta: toMoney(Math.max(0, summary.paidAmount - previousPaidAmount))
   }
 }
 
