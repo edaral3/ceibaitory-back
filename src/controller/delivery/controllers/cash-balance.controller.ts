@@ -64,7 +64,9 @@ export const setReceivedCash = async (req: Request, res: Response, next: NextFun
 export const listEvents = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const cashEventModel = (req as any).CollectionDeliveryCashEvent
-    const events = await listCashEvents(cashEventModel, Number(req.query?.pageSize) || 50)
+    const rawDateKey = req.query?.dateKey
+    const dateKey = typeof rawDateKey === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rawDateKey) ? rawDateKey : undefined
+    const events = await listCashEvents(cashEventModel, Number(req.query?.pageSize) || 50, dateKey)
     res.json(ok(events))
   } catch (error) {
     next(error)

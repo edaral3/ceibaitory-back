@@ -528,7 +528,7 @@ const createBatch = async (req: any, res: any): Promise<void> => {
   try {
     const { shedId, startDate, concentrateStoreId, employeeId, initialChickenAmount } = req.body
     const foundShed = await req.CollectionShed.findById(shedId)
-    if (!foundShed) throw { type: 400, message: 'Shed not found' }
+    if (!foundShed || foundShed.deleted) throw { type: 400, message: 'Shed not found' }
 
     const foundBatch = await req.CollectionBatch.findOne({ shed: foundShed, state: true })
     if (foundBatch) throw { type: 400, message: 'Ya hay un lote activo en este galpón' }
@@ -569,7 +569,7 @@ const getBatches = async (req: any, res: any): Promise<void> => {
 
 const getSheds = async (req: any, res: any): Promise<void> => {
   try {
-    const sheds = await req.CollectionShed.find()
+    const sheds = await req.CollectionShed.find({ deleted: { $ne: true } })
     res.send(sheds)
   } catch (error: any) {
     sendError(res, error, 'Error getting sheds')
@@ -1174,7 +1174,10 @@ const createChikenShed = async (req: any, res: any): Promise<void> => {
 const deleteChikenShed = async (req: any, res: any): Promise<void> => {
   try {
     const { id } = req.body
-    await req.CollectionShed.findByIdAndDelete(id)
+    const activeBatch = await req.CollectionBatch.findOne({ shed: id, state: true })
+    if (activeBatch) throw { type: 400, message: 'No se puede eliminar un galpón con un lote activo' }
+
+    await req.CollectionShed.findByIdAndUpdate(id, { $set: { deleted: true } })
     res.send({ message: 'OK' })
   } catch (error: any) {
     sendError(res, error, 'Error deleting chicken shed')

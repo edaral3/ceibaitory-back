@@ -303,10 +303,11 @@ export const decreaseDriverReceivedCashBalance = async (
   return doc
 }
 
-export const listCashEvents = async (CashEventModel: any, limit = 50) => {
+export const listCashEvents = async (CashEventModel: any, limit = 50, dateKey?: string) => {
   if (!CashEventModel) return []
   const safeLimit = Math.min(Math.max(Math.trunc(Number(limit) || 50), 1), 200)
-  return CashEventModel.find().sort({ createdAt: -1 }).limit(safeLimit)
+  const filter = dateKey ? { dateKey } : {}
+  return CashEventModel.find(filter).sort({ createdAt: -1 }).limit(safeLimit)
 }
 
 export const reconcileCashBalance = async (
